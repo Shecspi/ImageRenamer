@@ -2,6 +2,7 @@ import os
 from os.path import isfile
 from datetime import datetime
 from exif import Image
+from plum.exceptions import UnpackError
 
 
 class Rename:
@@ -12,11 +13,14 @@ class Rename:
     # Шаблон для нового имени файла
     template_datetime: str = '%Y-%m-%d %H-%M-%S'
 
-    SUCCESS_CODE = '+ "{0}" успешно переименован в "{1}"'
-    FILE_EXISTS_CODE = '- "{0}" не переименован, так как "{1}" уже существует.'
-    PERMISSION_DENIED_CODE = '- "{0}" не переименован. Отказано в доступе.'
-    FILE_DOESNT_HAVE_EXIF = '- "{0}" не переименован. У файла нет EXIF-данных.'
-    INCORRECT_EXIF_CODE = '- "{0}" не переименова. У файла некорректные EXIF-данные.'
+    result_code: dict = {
+        'SUCCESS': '+ "{0}" успешно переименован в "{1}"',
+        'FILE_EXISTS': '- "{0}" не переименован, так как "{1}" уже существует.',
+        'PERMISSION_DENIED': '- "{0}" не переименован. Отказано в доступе.',
+        'FILE_DOESNT_HAVE_EXIF': '- "{0}" не переименован. У файла нет EXIF-данных.',
+        'INCORRECT_EXIF': '- "{0}" не переименова. У файла некорректные EXIF-данные.',
+        'CANT_UNPACK': '- "{0}" не переименован. Не получилось распаковать файл.'
+    }
 
     def __init__(self):
         for filename in sorted(os.listdir()):
@@ -24,38 +28,31 @@ class Rename:
                 try:
                     new_name = self._get_datetime_from_exif(filename)
                 except ValueError:
-                    self._show_result(self.INCORRECT_EXIF_CODE, new_name)
+                    self._show_result(self.result_code['INCORRECT_EXIF_CODE'], filename)
                     continue
                 except PermissionError:
-                    self._show_result(self.PERMISSION_DENIED_CODE, new_name)
+                    self._show_result(self.result_code['PERMISSION_DENIED'], filename)
+                    continue
+                except UnpackError:
+                    self._show_result(self.result_code['CANT_UNPACK'], filename)
                     continue
 
                 if new_name:
                     try:
                         self._rename_file(filename, new_name)
-                        self._show_result(self.SUCCESS_CODE, filename, new_name)
+                        self._show_result(self.result_code['SUCCESS'], filename, new_name)
                     except FileExistsError:
-                        self._show_result(self.FILE_EXISTS_CODE, filename, new_name)
+                        self._show_result(self.result_code['FILE_EXISTS'], filename, new_name)
                     except PermissionError:
-                        self._show_result(self.PERMISSION_DENIED_CODE, filename)
+                        self._show_result(self.result_code['PERMISSION_DENIED'], filename)
                 else:
-                    self._show_result(self.FILE_DOESNT_HAVE_EXIF, filename)
+                    self._show_result(self.result_code['FILE_DOESNT_HAVE_EXIF'], filename)
 
     def _show_result(self, code: str, old_filename: str, new_filename: str = ''):
         """
         Выводит в консоль сообщение с результатом переименования файла.
         """
-        match code:
-            case self.SUCCESS_CODE:
-                print(self.SUCCESS_CODE.format(old_filename, new_filename))
-            case self.FILE_EXISTS_CODE:
-                print(self.FILE_EXISTS_CODE.format(old_filename, new_filename))
-            case self.PERMISSION_DENIED_CODE:
-                print(self.PERMISSION_DENIED_CODE.format(old_filename))
-            case self.FILE_DOESNT_HAVE_EXIF:
-                print(self.FILE_DOESNT_HAVE_EXIF.format(old_filename))
-            case self.INCORRECT_EXIF_CODE:
-                print(self.INCORRECT_EXIF_CODE.format(old_filename))
+        print(code.format(old_filename, new_filename))
 
     def _get_datetime_from_exif(self, filename: str) -> str | bool:
         """
