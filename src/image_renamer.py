@@ -7,10 +7,16 @@ from exif import Image
 class Rename:
     # Формат даты и времени, по которому извлекается информация из EXIF.
     # В моих фотографиях он именно такой, но не исключаю, что в других фотоаппаратах может отличаться.
-    standart_format_of_datetime: str = '%Y:%m-%d %H:%M:%S'
+    standart_format_of_datetime: str = '%Y:%m:%d %H:%M:%S'
 
     # Шаблон для нового имени файла
     template_datetime: str = '%Y-%m-%d %H-%M-%S'
+
+    SUCCESS_CODE = '+ "{0}" успешно переименован в "{1}"'
+    FILE_EXISTS_CODE = '- "{0}" не переименован, так как "{1}" уже существует.'
+    PERMISSION_DENIED_CODE = '- "{0}" не переименован. Отказано в доступе.'
+    FILE_DOESNT_HAVE_EXIF = '- "{0}" не переименован. У файла нет EXIF-данных.'
+    INCORRECT_EXIF_CODE = '- "{0}" не переименова. У файла некорректные EXIF-данные.'
 
     def __init__(self):
         for filename in sorted(os.listdir()):
@@ -18,17 +24,38 @@ class Rename:
                 try:
                     new_name = self._get_datetime_from_exif(filename)
                 except ValueError:
-                    print(f'- "{filename}" содержит некорректный формат EXIF-даты.')
+                    self._show_result(self.INCORRECT_EXIF_CODE, new_name)
+                    continue
+                except PermissionError:
+                    self._show_result(self.PERMISSION_DENIED_CODE, new_name)
                     continue
 
                 if new_name:
                     try:
                         self._rename_file(filename, new_name)
-                        print(f'+ "{filename}" успешно переименован в "{new_name}"')
+                        self._show_result(self.SUCCESS_CODE, filename, new_name)
                     except FileExistsError:
-                        print(f'- "{new_name}" уже существует. "{filename}" не переименован.')
+                        self._show_result(self.FILE_EXISTS_CODE, filename, new_name)
+                    except PermissionError:
+                        self._show_result(self.PERMISSION_DENIED_CODE, filename)
                 else:
-                    print(f'- "{filename}" не содержит EXIF-информации')
+                    self._show_result(self.FILE_DOESNT_HAVE_EXIF, filename)
+
+    def _show_result(self, code: str, old_filename: str, new_filename: str = ''):
+        """
+        Выводит в консоль сообщение с результатом переименования файла.
+        """
+        match code:
+            case self.SUCCESS_CODE:
+                print(self.SUCCESS_CODE.format(old_filename, new_filename))
+            case self.FILE_EXISTS_CODE:
+                print(self.FILE_EXISTS_CODE.format(old_filename, new_filename))
+            case self.PERMISSION_DENIED_CODE:
+                print(self.PERMISSION_DENIED_CODE.format(old_filename))
+            case self.FILE_DOESNT_HAVE_EXIF:
+                print(self.FILE_DOESNT_HAVE_EXIF.format(old_filename))
+            case self.INCORRECT_EXIF_CODE:
+                print(self.INCORRECT_EXIF_CODE.format(old_filename))
 
     def _get_datetime_from_exif(self, filename: str) -> str | bool:
         """
