@@ -52,26 +52,45 @@ class ImageRenamer:
         :param preview: Если True, то будет выведен виртуальный результат переименования, но без переименования.
         :return: None
         """
+        list_of_new_filenames: list = []
+
         for filename in sorted(os.listdir()):
+            # Пропускаем все директории.
+            # ToDo реализовать возоможность рекурсивного прохождения директорий
             if isdir(filename):
                 continue
 
+            # Получаем EXIF-данные из файла. В случае возникновения ошибок -
+            # печатаем сообщение в консоль и переходим на следующую итерацию цикла.
             new_name = self.__check_availability_to_file(filename)
             if new_name in self.result_code.values():
                 self.__print_message(new_name, filename)
                 continue
 
             if new_name is not None:
+                # Если файл с таким названием уже существует - выдаём сообщение о невозможности переименования
+                # и переходим на следующую итерацию цикла.
                 if isfile(new_name):
                     self.__print_message(self.result_code['FILE_EXISTS'], filename, new_name)
                     continue
 
-                if not preview:
+                # Если установлен фалг --preview, то производим отображение результата без переименования файлов.
+                # Для исключения создания файлов с одинаковым именем, используется список list_of_new_filenames.
+                # Если в нём уже есть элемент с таким же именем, то выводится соответствующее сообщение.
+                if preview:
+                    if new_name in list_of_new_filenames:
+                        self.__print_message(self.result_code['FILE_EXISTS'], filename, new_name)
+                        continue
+                    else:
+                        self.__print_message(self.result_code['SUCCESS'], filename, new_name)
+                        list_of_new_filenames.append(new_name)
+                # Если флага --preview нет, то переименовываем файлы
+                else:
                     try:
                         os.rename(filename, new_name)
+                        self.__print_message(self.result_code['SUCCESS'], filename, new_name)
                     except PermissionError:
                         self.__print_message(self.result_code['PERMISSION_DENIED'], filename)
-                self.__print_message(self.result_code['SUCCESS'], filename, new_name)
             else:
                 self.__print_message(self.result_code['FILE_DOESNT_HAVE_EXIF'], filename)
 
