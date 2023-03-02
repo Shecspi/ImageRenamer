@@ -4,17 +4,19 @@ from src import ImageRenamer
 
 
 @click.command()
+@click.argument('path', default='.', type=str)
 @click.option('-p', '--preview',
               is_flag=True,
               default=False,
               show_default=True,
               help='Отобразить результат работы программы без переименования файлов.')
 @click.option('-t', '--template',
-              default='%Y:%m:%d %H:%M:%S',
+              default='%Y.%m.%d %H:%M:%S',
               show_default=True,
               help='Шаблон, на основе которого будет производиться переименование файлов.')
-def main(preview: bool, template: str):
+def main(path: str, preview: bool, template: str) -> None:
     renamer = ImageRenamer.ImageRenamer()
+    renamer.set_path(path)
     renamer.set_template(template)
     if preview:
         renamer.rename(preview=True)
