@@ -17,7 +17,7 @@ class ImageRenamer:
     standart_format_of_datetime: str = '%Y:%m:%d %H:%M:%S'
 
     # Шаблон для нового имени файла
-    template_datetime: str = '%Y-%m-%d %H-%M-%S'
+    template_datetime_for_new_file: str
 
     result_code: dict = {
         'SUCCESS': (click.style('+ ', fg='green') +
@@ -42,6 +42,10 @@ class ImageRenamer:
                         click.style('{0}', bold=True, fg='red') +
                         click.style(' невозможно переименовать. Не получилось распаковать файл.', fg='red'))
     }
+
+    def set_template(self, template: str) -> None:
+        """Устанавливает шаблон переименования файлов"""
+        self.template_datetime_for_new_file = template
 
     def rename(self, preview: bool = False) -> None:
         """
@@ -111,7 +115,7 @@ class ImageRenamer:
         """
         Возвращает строку с изменённым на основе шаблона форматом даты и времени.
         """
-        return datetime.strftime(old_format, self.template_datetime)
+        return datetime.strftime(old_format, self.template_datetime_for_new_file)
 
     @staticmethod
     def __print_message(code: str, old_filename: str, new_filename: str = ''):
