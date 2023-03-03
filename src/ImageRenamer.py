@@ -16,10 +16,6 @@ class ImageRenamer:
     Производит переименование всех файлов в текущем каталоге на основе информации из EXIF-данных.
     Директории пропускаются, рекурсивное переименование директорий не поддерживается.
     """
-    # Формат даты и времени, по которому извлекается информация из EXIF.
-    # В моих фотографиях он именно такой, но не исключаю, что в других фотоаппаратах может отличаться.
-    __standart_format_of_datetime: str = '%Y:%m:%d %H:%M:%S'
-
     # Шаблон для нового имени файла
     __template_datetime_for_new_file: str
 
@@ -97,7 +93,8 @@ class ImageRenamer:
                     # Если в нём уже есть элемент с таким же именем, то выводится соответствующее сообщение.
                     if preview:
                         if short_new_filename in list_of_new_filenames:
-                            self.__print_message(self.result_code['FILE_EXISTS'], short_old_filename, short_new_filename)
+                            self.__print_message(self.result_code['FILE_EXISTS'], short_old_filename,
+                                                 short_new_filename)
                             continue
                         self.__print_message(self.result_code['SUCCESS'], short_old_filename, short_new_filename)
                         list_of_new_filenames.append(short_new_filename)
@@ -143,9 +140,19 @@ class ImageRenamer:
         extension = filename.split('.')[-1]
 
         exifdata = image.getexif()
-        old_format = datetime.strptime(exifdata[306], self.__standart_format_of_datetime)
+        old_format = self.__try_parsing_date(exifdata[306])
 
         return self.__reformat_datetime(old_format) + f'.{extension}'
+
+    def __try_parsing_date(self, datetime_string):
+        """ Пытается преобразовать дату 'datetime_string' в тип 'datetime'. """
+        datetimes_templates = ('%Y:%m:%d %H:%M:%S', '%Y.%m.%d %H:%M:%S', '%Y/%m/%d %H:%M:%S', '%Y/%d/%m %H:%M:%S')
+        for template in datetimes_templates:
+            try:
+                return datetime.strptime(datetime_string, template)
+            except:
+                pass
+        raise ValueError('Datetime format is not valid.')
 
     def __reformat_datetime(self, old_format: datetime) -> str:
         """
