@@ -2,9 +2,13 @@ import os
 from os.path import isfile, isdir
 from datetime import datetime
 
+import PIL
+from PIL import Image
+from pillow_heif import register_heif_opener
+
 import click
-from exif import Image
-from plum.exceptions import UnpackError
+
+register_heif_opener()
 
 
 class ImageRenamer:
@@ -26,23 +30,20 @@ class ImageRenamer:
                     click.style('{0}', bold=True, fg='green') +
                     click.style(' -> ', fg='green') +
                     click.style('{1}', bold=True, fg='green')),
-        'FILE_EXISTS': (click.style('- ', fg='yellow') +
-                        click.style('{0}', bold=True, fg='yellow') +
-                        click.style(' невозможно переименовать, ', fg='yellow') +
-                        click.style('{1}', bold=True, fg='yellow') +
-                        click.style(' уже существует.', fg='yellow')),
+        'FILE_EXISTS': (click.style('- ', fg='red') +
+                        click.style('{0}', bold=True, fg='red') +
+                        click.style(' невозможно переименовать, ', fg='red') +
+                        click.style('{1}', bold=True, fg='red') +
+                        click.style(' уже существует.', fg='red')),
+        'FILE_NOT_EXISTS': (click.style('- ', fg='red') +
+                            click.style('{0}', bold=True, fg='red') +
+                            click.style(' не существует.', fg='red')),
         'PERMISSION_DENIED': (click.style('- ', fg='red') +
                               click.style('{0}', bold=True, fg='red') +
                               click.style(' невозможно переименовать. Отказано в доступе.', fg='red')),
-        'FILE_DOESNT_HAVE_EXIF': (click.style('- ', fg='red') +
-                                  click.style('{0}', bold=True, fg='red') +
-                                  click.style(' невозможно переименовать. У файла нет EXIF-данных.', fg='red')),
-        'INCORRECT_EXIF': (click.style('- ', fg='red') +
-                           click.style('{0}', bold=True, fg='red') +
-                           click.style(' невозможно переименовать. У файла некорректные EXIF-данные.', fg='red')),
-        'CANT_UNPACK': (click.style('- ', fg='red') +
-                        click.style('{0}', bold=True, fg='red') +
-                        click.style(' невозможно переименовать. Не получилось распаковать файл.', fg='red'))
+        'FILE_DOESNT_HAVE_EXIF': (click.style('- ', fg='yellow') +
+                                  click.style('{0}', bold=True, fg='yellow') +
+                                  click.style(' невозможно переименовать. У файла нет EXIF-данных.', fg='yellow'))
     }
 
     __dir_not_exist = (click.style('Директория ', fg='red') +
@@ -121,12 +122,12 @@ class ImageRenamer:
         """
         try:
             result = self.__get_datetime_from_exif(filename)
-        except ValueError:
-            result = self.result_code['INCORRECT_EXIF']
+        except FileNotFoundError:
+            result = self.result_code['FILE_NOT_EXISTS']
+        except PIL.UnidentifiedImageError:
+            result = self.result_code['FILE_DOESNT_HAVE_EXIF']
         except PermissionError:
             result = self.result_code['PERMISSION_DENIED']
-        except UnpackError:
-            result = self.result_code['CANT_UNPACK']
 
         return result
 
@@ -138,15 +139,13 @@ class ImageRenamer:
 
         В случае, если формат даты и времени в EXIF не соответствует стандартному, вызывается исключение ValueError.
         """
-        image = Image(filename)
+        image = Image.open(filename)
         extension = filename.split('.')[-1]
 
-        if image.has_exif:
-            old_format = datetime.strptime(image.datetime_original, self.__standart_format_of_datetime)
+        exifdata = image.getexif()
+        old_format = datetime.strptime(exifdata[306], self.__standart_format_of_datetime)
 
-            return self.__reformat_datetime(old_format) + f'.{extension}'
-
-        return None
+        return self.__reformat_datetime(old_format) + f'.{extension}'
 
     def __reformat_datetime(self, old_format: datetime) -> str:
         """
