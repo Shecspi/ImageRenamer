@@ -123,6 +123,8 @@ class ImageRenamer:
             result = self.result_code['FILE_NOT_EXISTS']
         except PIL.UnidentifiedImageError:
             result = self.result_code['FILE_DOESNT_HAVE_EXIF']
+        except KeyError:
+            result = self.result_code['FILE_DOESNT_HAVE_EXIF']
         except PermissionError:
             result = self.result_code['PERMISSION_DENIED']
 
