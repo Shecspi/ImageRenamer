@@ -18,7 +18,7 @@ from src import ImageRenamer
               is_flag=True,
               default=False,
               show_default=True,
-              help='При совпадении имён файла добавлять порядковый номер в конец имени.')
+              help='При совпадении имён файла добавлять суффикс в конец имени.')
 def main(path: str, preview: bool, template: str, make_unique_name: bool = False) -> None:
     renamer = ImageRenamer.ImageRenamer()
     renamer.set_path(path)
