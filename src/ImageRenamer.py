@@ -16,10 +16,10 @@ class ImageRenamer:
     Производит переименование всех файлов в текущем каталоге на основе информации из EXIF-данных.
     Директории пропускаются, рекурсивное переименование директорий не поддерживается.
     """
-    # Шаблон для нового имени файла
-    __template_datetime_for_new_file: str
-
-    __path: str
+    __path: str = '.'
+    __is_make_unique_name: bool = False
+    __suffix_for_unique_name: str = ' (copy)'
+    __template_datetime_for_new_file: str = '%Y.%m.%d %H:%M:%S'
 
     result_code: dict = {
         'SUCCESS': (click.style('+ ', fg='green') +
@@ -54,6 +54,9 @@ class ImageRenamer:
         """Устанавливает шаблон переименования файлов. """
         self.__template_datetime_for_new_file = template
 
+    def set_make_unique_name(self, make_unique_name: bool) -> None:
+        self.__is_make_unique_name = make_unique_name
+
     def rename(self, preview: bool = False) -> None:
         """
         :param preview: Если True, то будет выведен виртуальный результат переименования, но без переименования.
@@ -64,49 +67,47 @@ class ImageRenamer:
         list_of_new_filenames: list = []
 
         try:
-            for short_old_filename in sorted(os.listdir(self.__path)):
-                full_old_filename = os.path.abspath(os.path.join(self.__path, short_old_filename))
+            for old_filename in sorted(os.listdir(self.__path)):
+                dirname = os.path.abspath(self.__path)
+                full_old_filename = os.path.abspath(os.path.join(self.__path, old_filename))
 
                 # Пропускаем все директории.
                 # ToDo реализовать возоможность рекурсивного прохождения директорий
-                if isdir(full_old_filename):
+                if isdir(os.path.join(dirname, old_filename)):
                     continue
 
                 # Получаем EXIF-данные из файла. В случае возникновения ошибок -
                 # печатаем сообщение в консоль и переходим на следующую итерацию цикла.
-                short_new_filename = self.__check_availability_to_file(full_old_filename)
-                full_new_filename = os.path.abspath(os.path.join(self.__path, short_new_filename))
+                new_filename = self.__check_availability_to_file(os.path.join(dirname, old_filename))
 
-                if short_new_filename in self.result_code.values():
-                    self.__print_message(short_new_filename, short_old_filename)
+                if new_filename in self.result_code.values():
+                    self.__print_message(new_filename, old_filename)
                     continue
 
-                if short_new_filename is not None:
-                    # Если файл с таким названием уже существует - выдаём сообщение о невозможности переименования
-                    # и переходим на следующую итерацию цикла.
-                    if isfile(full_new_filename):
-                        self.__print_message(self.result_code['FILE_EXISTS'], short_old_filename, short_new_filename)
-                        continue
-
-                    # Если установлен фалг --preview, то производим отображение результата без переименования файлов.
-                    # Для исключения создания файлов с одинаковым именем, используется список list_of_new_filenames.
-                    # Если в нём уже есть элемент с таким же именем, то выводится соответствующее сообщение.
-                    if preview:
-                        if short_new_filename in list_of_new_filenames:
-                            self.__print_message(self.result_code['FILE_EXISTS'], short_old_filename,
-                                                 short_new_filename)
+                if new_filename is not None:
+                    if new_filename in os.listdir(dirname):
+                        if self.__is_make_unique_name:
+                            new_filename = self.__make_unique_filename(new_filename, dirname)
+                            if not preview:
+                                try:
+                                    os.rename(full_old_filename, os.path.join(dirname, new_filename))
+                                except PermissionError:
+                                    self.__print_message(self.result_code['PERMISSION_DENIED'], old_filename)
+                            self.__print_message(self.result_code['SUCCESS'], old_filename, new_filename)
                             continue
-                        self.__print_message(self.result_code['SUCCESS'], short_old_filename, short_new_filename)
-                        list_of_new_filenames.append(short_new_filename)
-                    # Если флага --preview нет, то переименовываем файлы
+                        else:
+                            self.__print_message(self.result_code['FILE_EXISTS'], old_filename, new_filename)
+                            continue
                     else:
-                        try:
-                            os.rename(full_old_filename, full_new_filename)
-                            self.__print_message(self.result_code['SUCCESS'], short_old_filename, short_new_filename)
-                        except PermissionError:
-                            self.__print_message(self.result_code['PERMISSION_DENIED'], short_old_filename)
+                        if not preview:
+                            try:
+                                os.rename(full_old_filename, os.path.join(dirname, new_filename))
+                            except PermissionError:
+                                self.__print_message(self.result_code['PERMISSION_DENIED'], old_filename)
+                        self.__print_message(self.result_code['SUCCESS'], old_filename, new_filename)
+                        continue
                 else:
-                    self.__print_message(self.result_code['FILE_DOESNT_HAVE_EXIF'], short_old_filename)
+                    self.__print_message(self.result_code['FILE_DOESNT_HAVE_EXIF'], old_filename)
         except FileNotFoundError:
             self.__print_message(self.__dir_not_exist, self.__path)
 
@@ -168,3 +169,24 @@ class ImageRenamer:
         Выводит в консоль отформатированное сообщение.
         """
         click.echo(code.format(old_filename, new_filename))
+
+    def __make_unique_filename(self, filename: str, dirname: str) -> str:
+        """
+        Добавляет к названию файла 'filename' перед расширением ' (copy)' и возвращает полученное имя.
+        :param filename: Имя файла, для которого нужно найти уникальное имя
+        :param dirname: Абсолютный путь к папке, в которой хранится файл
+        :return: Новое имя файла, уникальное для папки dirname
+        """
+        splited = filename.split('.')
+        extention = splited[-1]
+        new_filename = ''
+        for item in range(0, len(splited) - 1):
+            if item == 0:
+                new_filename += f'{splited[item]}'
+            else:
+                new_filename += f'.{splited[item]}'
+        new_filename += f'{self.__suffix_for_unique_name}.{extention}'
+        if isfile(os.path.join(dirname, new_filename)):
+            new_filename = self.__make_unique_filename(new_filename, dirname)
+
+        return new_filename
