@@ -16,12 +16,12 @@ from src import ImageRenamer
               help='Шаблон, на основе которого будет производиться переименование файлов.')
 @click.option('--make-unique-name',
               is_flag=True,
-              default=False,
+              default=True,
               show_default=True,
-              help='При совпадении имён файла добавлять суффикс в конец имени.')
+              help='При совпадении имён файла добавлять суффикс в конец имени. ' +
+                   'Если False, то файл с таким же именем будет перезаписан.')
 def main(path: str, preview: bool, template: str, make_unique_name: bool = False) -> None:
-    renamer = ImageRenamer.ImageRenamer()
-    renamer.set_path(path)
+    renamer = ImageRenamer.ImageRenamer(path)
     renamer.set_template(template)
     renamer.set_make_unique_name(make_unique_name)
     if preview:

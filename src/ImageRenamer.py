@@ -16,12 +16,13 @@ class ImageRenamer:
     Производит переименование всех файлов в текущем каталоге на основе информации из EXIF-данных.
     Директории пропускаются, рекурсивное переименование директорий не поддерживается.
     """
-    __path: str = '.'
+    __path: str
+    __root_path: str
     __is_make_unique_name: bool = False
     __suffix_for_unique_name: str = ' (copy)'
     __template_datetime_for_new_file: str = '%Y.%m.%d %H:%M:%S'
 
-    result_code: dict = {
+    message_code: dict = {
         'SUCCESS': (click.style('+ ', fg='green') +
                     click.style('{0}', bold=True, fg='green') +
                     click.style(' -> ', fg='green') +
@@ -46,6 +47,9 @@ class ImageRenamer:
                        click.style('{0}', bold=True, fg='red') +
                        click.style(' не существует.', fg='red'))
 
+    def __init__(self, path: str):
+        self.__path = self.__root_path = str(path)
+
     def set_path(self, path):
         """ Устанавливает путь директории, в которой происходит переименование файлов. """
         self.__path = path
@@ -62,52 +66,54 @@ class ImageRenamer:
         :param preview: Если True, то будет выведен виртуальный результат переименования, но без переименования.
         :return: None
         """
-        # Список, в который будут заноситься новые имена файлов в --preview режиме.
-        # Он нужен для того, чтобы исключить появление дубликатов.
-        list_of_new_filenames: list = []
-
         try:
             for old_filename in sorted(os.listdir(self.__path)):
-                dirname = os.path.abspath(self.__path)
-                full_old_filename = os.path.abspath(os.path.join(self.__path, old_filename))
+                abs_dirname = os.path.abspath(self.__path)
+                local_dirname = abs_dirname.replace(self.__root_path, '')[1:]
+                full_old_filename = os.path.join(abs_dirname, old_filename)
 
-                # Пропускаем все директории.
-                # ToDo реализовать возоможность рекурсивного прохождения директорий
-                if isdir(os.path.join(dirname, old_filename)):
+                if isdir(full_old_filename):
+                    # ToDo Добавить флаг
+                    self.set_path(full_old_filename)
+                    self.rename(preview)
                     continue
 
                 # Получаем EXIF-данные из файла. В случае возникновения ошибок -
                 # печатаем сообщение в консоль и переходим на следующую итерацию цикла.
-                new_filename = self.__check_availability_to_file(os.path.join(dirname, old_filename))
+                new_filename = self.__check_availability_to_file(os.path.join(abs_dirname, old_filename))
 
-                if new_filename in self.result_code.values():
+                local_old_filename = os.path.join(local_dirname, old_filename)
+                local_new_filename = os.path.join(local_dirname, new_filename)
+
+                if new_filename in self.message_code.values():
                     self.__print_message(new_filename, old_filename)
                     continue
 
                 if new_filename is not None:
-                    if new_filename in os.listdir(dirname):
+                    if new_filename in os.listdir(abs_dirname):
                         if self.__is_make_unique_name:
-                            new_filename = self.__make_unique_filename(new_filename, dirname)
+                            new_filename = self.__make_unique_filename(new_filename, abs_dirname)
                             if not preview:
                                 try:
-                                    os.rename(full_old_filename, os.path.join(dirname, new_filename))
+                                    os.rename(full_old_filename, os.path.join(abs_dirname, new_filename))
                                 except PermissionError:
-                                    self.__print_message(self.result_code['PERMISSION_DENIED'], old_filename)
-                            self.__print_message(self.result_code['SUCCESS'], old_filename, new_filename)
+                                    self.__print_message(self.message_code['PERMISSION_DENIED'], local_old_filename)
+                            self.__print_message(self.message_code['SUCCESS'], local_old_filename, local_new_filename)
                             continue
                         else:
-                            self.__print_message(self.result_code['FILE_EXISTS'], old_filename, new_filename)
+                            self.__print_message(self.message_code['FILE_EXISTS'],
+                                                 local_old_filename, local_new_filename)
                             continue
                     else:
                         if not preview:
                             try:
-                                os.rename(full_old_filename, os.path.join(dirname, new_filename))
+                                os.rename(full_old_filename, os.path.join(abs_dirname, new_filename))
                             except PermissionError:
-                                self.__print_message(self.result_code['PERMISSION_DENIED'], old_filename)
-                        self.__print_message(self.result_code['SUCCESS'], old_filename, new_filename)
+                                self.__print_message(self.message_code['PERMISSION_DENIED'], local_old_filename)
+                        self.__print_message(self.message_code['SUCCESS'], local_old_filename, local_new_filename)
                         continue
                 else:
-                    self.__print_message(self.result_code['FILE_DOESNT_HAVE_EXIF'], old_filename)
+                    self.__print_message(self.message_code['FILE_DOESNT_HAVE_EXIF'], local_old_filename)
         except FileNotFoundError:
             self.__print_message(self.__dir_not_exist, self.__path)
 
@@ -121,13 +127,13 @@ class ImageRenamer:
         try:
             result = self.__get_datetime_from_exif(filename)
         except FileNotFoundError:
-            result = self.result_code['FILE_NOT_EXISTS']
+            result = self.message_code['FILE_NOT_EXISTS']
         except PIL.UnidentifiedImageError:
-            result = self.result_code['FILE_DOESNT_HAVE_EXIF']
+            result = self.message_code['FILE_DOESNT_HAVE_EXIF']
         except KeyError:
-            result = self.result_code['FILE_DOESNT_HAVE_EXIF']
+            result = self.message_code['FILE_DOESNT_HAVE_EXIF']
         except PermissionError:
-            result = self.result_code['PERMISSION_DENIED']
+            result = self.message_code['PERMISSION_DENIED']
 
         return result
 
