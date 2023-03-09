@@ -94,11 +94,13 @@ def create_recoursive_folder(tmpdir):
 
 def execute_renamer(temp_dir: str,
                     template: str = '%Y.%m.%d %H:%M:%S',
-                    make_unique_name: bool = False) -> None:
+                    make_unique_name: bool = False,
+                    recursion: bool = False) -> None:
     """
     Запускает ImageRenamer.
     """
     renamer = ImageRenamer.ImageRenamer(temp_dir)
     renamer.set_template(template)
     renamer.set_make_unique_name(make_unique_name)
+    renamer.set_recursion(recursion)
     renamer.rename()

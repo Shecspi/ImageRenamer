@@ -18,6 +18,7 @@ class ImageRenamer:
     """
     __path: str
     __root_path: str
+    __recursion: bool = False
     __is_make_unique_name: bool = False
     __suffix_for_unique_name: str = ' (copy)'
     __template_datetime_for_new_file: str = '%Y.%m.%d %H:%M:%S'
@@ -58,6 +59,9 @@ class ImageRenamer:
         """Устанавливает шаблон переименования файлов. """
         self.__template_datetime_for_new_file = template
 
+    def set_recursion(self, recursion: False) -> None:
+        self.__recursion = recursion
+
     def set_make_unique_name(self, make_unique_name: bool) -> None:
         self.__is_make_unique_name = make_unique_name
 
@@ -74,8 +78,9 @@ class ImageRenamer:
 
                 if isdir(full_old_filename):
                     # ToDo Добавить флаг
-                    self.set_path(full_old_filename)
-                    self.rename(preview)
+                    if self.__recursion:
+                        self.set_path(full_old_filename)
+                        self.rename(preview)
                     continue
 
                 # Получаем EXIF-данные из файла и используем их для нового имени.
