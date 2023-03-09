@@ -93,6 +93,7 @@ class ImageRenamer:
                     if new_filename in os.listdir(abs_dirname):
                         if self.__is_make_unique_name:
                             new_filename = self.__make_unique_filename(new_filename, abs_dirname)
+                            local_new_filename = os.path.join(local_dirname, new_filename)
                             if not preview:
                                 try:
                                     os.rename(full_old_filename, os.path.join(abs_dirname, new_filename))

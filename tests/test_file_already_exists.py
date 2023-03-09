@@ -166,7 +166,6 @@ def test_same_datetimes_unique_names_true__listdir(create_images: str):
     actual_list_of_images = sorted(os.listdir(create_images))
     for file in expected_list_of_images:
         assert file in actual_list_of_images
-    print(os.listdir(create_images))
 
 
 def test_same_datetimes_unique_names_true__stdout(create_images: str, capsys):
