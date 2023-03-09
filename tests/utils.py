@@ -104,3 +104,22 @@ def execute_renamer(temp_dir: str,
     renamer.set_make_unique_name(make_unique_name)
     renamer.set_recursion(recursion)
     renamer.rename()
+
+
+def new_image(abs_path: str, filename: str,
+              datetime_string: str, chmod: oct):
+    # Создание файла изображения
+    image = Image.new('RGB', (10, 10), 'blue')
+    filename = abs_path.join(filename)
+    image.save(str(filename), 'JPEG')
+
+    # Внесение даты и времени создания в EXIF
+    exif_dict = piexif.load(str(filename))
+    new_datetime = datetime_string
+    exif_dict['0th'][piexif.ImageIFD.DateTime] = new_datetime
+    exif_dict['Exif'][piexif.ExifIFD.DateTimeDigitized] = new_datetime
+    exif_dict['Exif'][36867] = new_datetime
+    exif_bytes = piexif.dump(exif_dict)
+    piexif.insert(exif_bytes, str(filename))
+
+    os.chmod(filename, chmod)
