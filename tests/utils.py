@@ -101,8 +101,7 @@ def execute_renamer(temp_dir: str,
     Запускает ImageRenamer.
     """
     renamer = ImageRenamer.ImageRenamer(temp_dir)
-    if template:
-        renamer.set_template(template)
+    renamer.set_template(template)
     renamer.set_make_unique_name(make_unique_name)
     renamer.set_recursion(recursion)
     renamer.rename()
