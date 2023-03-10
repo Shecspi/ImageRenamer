@@ -41,7 +41,10 @@ class ImageRenamer:
                               click.style(' невозможно переименовать. Отказано в доступе.', fg='red')),
         'FILE_DOESNT_HAVE_EXIF': (click.style('- ', fg='yellow') +
                                   click.style('{0}', bold=True, fg='yellow') +
-                                  click.style(' невозможно переименовать. У файла нет EXIF-данных.', fg='yellow'))
+                                  click.style(' невозможно переименовать. У файла нет EXIF-данных.', fg='yellow')),
+        'INCORRECT_EXIF': (click.style('- ', fg='yellow') +
+                           click.style('{0}', bold=True, fg='yellow') +
+                           click.style(' невозможно переименовать. Не получилось прочитать EXIF-данные.', fg='yellow')),
     }
 
     __dir_not_exist = (click.style('Директория ', fg='red') +
@@ -141,6 +144,8 @@ class ImageRenamer:
             result = self.message_code['FILE_DOESNT_HAVE_EXIF']
         except PermissionError:
             result = self.message_code['PERMISSION_DENIED']
+        except ValueError:
+            result = self.message_code['INCORRECT_EXIF']
 
         return result
 
@@ -155,20 +160,29 @@ class ImageRenamer:
         image = Image.open(filename)
         extension = filename.split('.')[-1]
 
-        exifdata = image.getexif()
-        old_format = self.__try_parsing_date(exifdata[306])
+        exifdata = image.getexif()[306]
+        old_format = self.__try_parsing_date(exifdata)
 
         return self.__reformat_datetime(old_format) + f'.{extension}'
 
-    def __try_parsing_date(self, datetime_string):
-        """ Пытается преобразовать дату 'datetime_string' в тип 'datetime'. """
+    @staticmethod
+    def __try_parsing_date(datetime_string):
+        """
+        Проверяет datetime_string на соответствие шиблонам.
+        В случае, если совпадение найдено, то возвращает объект типа Datetime.
+        Если совпадения не обнаружено возвращает ValueError.
+        """
         datetimes_templates = ('%Y:%m:%d %H:%M:%S', '%Y.%m.%d %H:%M:%S', '%Y/%m/%d %H:%M:%S', '%Y/%d/%m %H:%M:%S')
         for template in datetimes_templates:
             try:
                 return datetime.strptime(datetime_string, template)
-            except:
-                pass
-        raise ValueError('Datetime format is not valid.')
+            # strptime() возвращает ValueError в случае, если не получилось преобразовать строку в Datetime.
+            # Но так как нужно проверить все вариант шаблонов, но просто переходим к следующей итерции цикла.
+            # И только если совпадения небыли найдены - возвращает ValueError.
+            # Это будет означать, что данные в Datetime некорректные.
+            except ValueError:
+                continue
+        raise ValueError()
 
     def __reformat_datetime(self, old_format: datetime) -> str:
         """
