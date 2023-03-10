@@ -21,7 +21,7 @@ class ImageRenamer:
     __recursion: bool = False
     __is_make_unique_name: bool = False
     __suffix_for_unique_name: str = ' (copy)'
-    __template_datetime_for_new_file: str = '%Y.%m.%d %H:%M:%S'
+    __template_datetime_for_new_file: str = '%Y%m%d_%H%M%S'
 
     message_code: dict = {
         'SUCCESS': (click.style('+ ', fg='green') +
