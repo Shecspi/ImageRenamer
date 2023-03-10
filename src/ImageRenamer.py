@@ -19,7 +19,7 @@ class ImageRenamer:
     __path: str
     __root_path: str
     __recursion: bool = False
-    __is_make_unique_name: bool = False
+    __is_unique_name: bool = False
     __suffix_for_unique_name: str = ' (copy)'
     __template_datetime_for_new_file: str = '%Y%m%d_%H%M%S'
 
@@ -62,8 +62,8 @@ class ImageRenamer:
     def set_recursion(self, recursion: False) -> None:
         self.__recursion = recursion
 
-    def set_make_unique_name(self, make_unique_name: bool) -> None:
-        self.__is_make_unique_name = make_unique_name
+    def set_make_unique_name(self, is_unique_name: bool) -> None:
+        self.__is_unique_name = is_unique_name
 
     def rename(self, preview: bool = False) -> None:
         """
@@ -106,7 +106,7 @@ class ImageRenamer:
                 # Если файл с таким именем уже существует в директории, то в зависимости от настроек
                 # либо подбираем уникальное имя, либо пишем, что невозможно переименовать, и идём дальше.
                 if new_filename in os.listdir(abs_dirname):
-                    if self.__is_make_unique_name:
+                    if self.__is_unique_name:
                         new_filename = self.__make_unique_filename(new_filename, abs_dirname)
                         local_new_filename = os.path.join(local_dirname, new_filename)
                     else:

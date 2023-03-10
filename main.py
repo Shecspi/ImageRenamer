@@ -29,12 +29,11 @@ from src import ImageRenamer
                    'проходить каталоги и переименовывать в них файлы.')
 def main(path: str, preview: bool, recursion: bool,
          template: str, unique_name: bool) -> None:
-    print(template)
     renamer = ImageRenamer.ImageRenamer(path)
-    renamer.rename(preview)
     renamer.set_recursion(recursion)
     renamer.set_template(template)
     renamer.set_make_unique_name(unique_name)
+    renamer.rename(preview)
 
 
 if __name__ == '__main__':
