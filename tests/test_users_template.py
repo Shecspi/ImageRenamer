@@ -5,8 +5,14 @@ import pytest
 from .utils import new_image, add_exif, execute_renamer
 
 
-@pytest.fixture(scope='function')
-def create_images(tmpdir) -> tuple:
+@pytest.fixture(scope='function', name='create_images')
+def fixture_create_images(tmpdir) -> str:
+    """
+    Фикстура, срабатывающая при каждом вызове тестирующей функции.
+    Создаёт все необходимые для тестирования папки и файлы.
+    :param tmpdir: Фикстура, указывающая на временную папку, в которой будут создаваться файлы.
+    :return: Абсолютный адрес временной папки, в которой были созданы файлы.
+    """
     abs_temp_dir = tmpdir.mkdir('images')
 
     filenames = (
@@ -19,7 +25,7 @@ def create_images(tmpdir) -> tuple:
         new_image(abs_temp_dir, file[0])
         add_exif(abs_temp_dir, file[0], file[1])
 
-    return abs_temp_dir
+    return str(abs_temp_dir)
 
 
 def test_users_template_1__listdir(create_images: str):

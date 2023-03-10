@@ -5,8 +5,14 @@ import pytest
 from .utils import new_image, add_exif, execute_renamer, change_chmod
 
 
-@pytest.fixture(scope='function')
-def create_images(tmpdir) -> tuple:
+@pytest.fixture(scope='function', name='create_images')
+def fixture_create_images(tmpdir) -> str:
+    """
+    Фикстура, срабатывающая при каждом вызове тестирующей функции.
+    Создаёт все необходимые для тестирования папки и файлы.
+    :param tmpdir: Фикстура, указывающая на временную папку, в которой будут создаваться файлы.
+    :return: Абсолютный адрес временной папки, в которой были созданы файлы.
+    """
     abs_temp_dir = tmpdir.mkdir('images')
 
     filenames = (

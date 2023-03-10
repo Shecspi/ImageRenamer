@@ -5,8 +5,14 @@ import pytest
 from .utils import new_image, add_exif, execute_renamer
 
 
-@pytest.fixture(scope='function')
-def create_images(tmpdir) -> tuple:
+@pytest.fixture(scope='function', name='create_images')
+def fixture_create_images(tmpdir) -> tuple:
+    """
+    Фикстура, срабатывающая при каждом вызове тестирующей функции.
+    Создаёт все необходимые для тестирования папки и файлы.
+    :param tmpdir: Фикстура, указывающая на временную папку, в которой будут создаваться файлы.
+    :return: Абсолютный адрес временной папки, в которой были созданы файлы.
+    """
     abs_temp_dir = tmpdir.mkdir('images')
     local_temp_dir_first_level = tmpdir.mkdir('images/level1')
     local_temp_dir_second_level = tmpdir.mkdir('images/level1/level2')
@@ -36,7 +42,7 @@ def test_recursive_default__zero_level__listdir(create_images):
     По-умолчанию, все директории, кроме самой первой, пропускаются и переименования не происходит.
     При пропуске директории ничего в консоль не выводится, поэтому проверки 'stdout' нет.
     """
-    zero_level_dir, first_level_dir, second_level_dir = create_images
+    zero_level_dir = create_images[0]
     execute_renamer(zero_level_dir)
 
     expected_list_of_images = sorted(['10010101_010101.jpg',
@@ -53,7 +59,7 @@ def test_recursive_default__first_level__listdir(create_images):
     По-умолчанию, все директории, кроме самой первой, пропускаются и переименования не происходит.
     При пропуске директории ничего в консоль не выводится, поэтому проверки 'stdout' нет.
     """
-    zero_level_dir, first_level_dir, second_level_dir = create_images
+    zero_level_dir, first_level_dir = create_images[0:2]
     execute_renamer(zero_level_dir)
 
     expected_list_of_images = sorted(['imageR1.jpg',
@@ -70,7 +76,8 @@ def test_recursive_default__second_level__listdir(create_images):
     По-умолчанию, все директории, кроме самой первой, пропускаются и переименования не происходит.
     При пропуске директории ничего в консоль не выводится, поэтому проверки 'stdout' нет.
     """
-    zero_level_dir, first_level_dir, second_level_dir = create_images
+    zero_level_dir = create_images[0]
+    second_level_dir = create_images[2]
     execute_renamer(zero_level_dir)
 
     expected_list_of_images = sorted(['imageL1.jpg',
@@ -84,10 +91,11 @@ def test_recursive_default__second_level__listdir(create_images):
 def test_recursive_false__zero_level__listdir(create_images):
     """
     Тестирует рекурсивное переименование файлов в директориях.
-    При флаге 'recursion = False' все директории, кроме самой первой, пропускаются и переименования не происходит.
+    При флаге 'recursion = False' все директории, кроме самой первой,
+    пропускаются и переименования не происходит.
     При пропуске директории ничего в консоль не выводится, поэтому проверки 'stdout' нет.
     """
-    zero_level_dir, first_level_dir, second_level_dir = create_images
+    zero_level_dir = create_images[0]
     execute_renamer(zero_level_dir, recursion=False)
 
     expected_list_of_images_second_level = sorted(['10010101_010101.jpg',
@@ -101,10 +109,11 @@ def test_recursive_false__zero_level__listdir(create_images):
 def test_recursive_false__first_level__listdir(create_images):
     """
     Тестирует рекурсивное переименование файлов в директориях.
-    При флаге 'recursion = False' все директории, кроме самой первой, пропускаются и переименования не происходит.
+    При флаге 'recursion = False' все директории, кроме самой первой,
+    пропускаются и переименования не происходит.
     При пропуске директории ничего в консоль не выводится, поэтому проверки 'stdout' нет.
     """
-    zero_level_dir, first_level_dir, second_level_dir = create_images
+    zero_level_dir, first_level_dir = create_images[0:2]
     execute_renamer(zero_level_dir, recursion=False)
 
     expected_list_of_images_second_level = sorted(['imageR1.jpg',
@@ -118,10 +127,12 @@ def test_recursive_false__first_level__listdir(create_images):
 def test_recursive_false__second_level__listdir(create_images):
     """
     Тестирует рекурсивное переименование файлов в директориях.
-    При флаге 'recursion = False' все директории, кроме самой первой, пропускаются и переименования не происходит.
+    При флаге 'recursion = False' все директории, кроме самой первой,
+    пропускаются и переименования не происходит.
     При пропуске директории ничего в консоль не выводится, поэтому проверки 'stdout' нет.
     """
-    zero_level_dir, first_level_dir, second_level_dir = create_images
+    zero_level_dir = create_images[0]
+    second_level_dir = create_images[2]
     execute_renamer(zero_level_dir, recursion=False)
 
     expected_list_of_images_second_level = sorted(['imageL1.jpg',
@@ -137,7 +148,7 @@ def test_recursive_true__zero_level__listdir(create_images):
     Тестирует рекурсивное переименование файлов в директориях.
     При флаге 'recursion' в значение 'True' все файлы в директориях должны быть переименованы.
     """
-    zero_level_dir, first_level_dir, second_level_dir = create_images
+    zero_level_dir = create_images[0]
     execute_renamer(zero_level_dir, recursion=True)
 
     expected_list_of_images_first_level = sorted(['10010101_010101.jpg',
@@ -153,7 +164,7 @@ def test_recursive_true__first_level__listdir(create_images):
     Тестирует рекурсивное переименование файлов в директориях.
     При флаге 'recursion' в значение 'True' все файлы в директориях должны быть переименованы.
     """
-    zero_level_dir, first_level_dir, second_level_dir = create_images
+    zero_level_dir, first_level_dir = create_images[0:2]
     execute_renamer(zero_level_dir, recursion=True)
 
     expected_list_of_images_first_level = sorted(['20010202_020202.jpg',
@@ -169,7 +180,8 @@ def test_recursive_true__second_level__listdir(create_images):
     Тестирует рекурсивное переименование файлов в директориях.
     При флаге 'recursion' в значение 'True' все файлы в директориях должны быть переименованы.
     """
-    zero_level_dir, first_level_dir, second_level_dir = create_images
+    zero_level_dir = create_images[0]
+    second_level_dir = create_images[2]
     execute_renamer(zero_level_dir, recursion=True)
 
     expected_list_of_images_first_level = sorted(['30010303_030303.jpg',
@@ -186,7 +198,7 @@ def test_recursive_true__stdout(create_images, capsys):
     При флаге 'recursion' в значение 'True' все файлы в директориях должны быть переименованы
     и должно появиться сообщение об этом.
     """
-    zero_level_dir, first_level_dir, second_level_dir = create_images
+    zero_level_dir = create_images[0]
     execute_renamer(zero_level_dir, recursion=True)
     expected_stdout = ['+ image1.jpg -> 10010101_010101.jpg',
                        '+ image2.jpg -> 10020101_010101.jpg',
