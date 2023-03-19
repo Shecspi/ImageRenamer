@@ -1,6 +1,7 @@
 import os
 from os.path import isfile, isdir
 from datetime import datetime
+from pprint import pprint
 
 import PIL
 from PIL import Image
@@ -11,6 +12,59 @@ import click
 register_heif_opener()
 
 
+class FileObject:
+    def __init__(self, root_dir_path: str = '.', is_recursion: bool = False):
+        self.__files = list()
+        self.__is_recursion = is_recursion
+        self.__root_dir_path = root_dir_path
+
+        self.__scan_of_dir(root_dir_path)
+
+    def __len__(self):
+        return len(self.__files)
+
+    def __getitem__(self, position):
+        return self.__files[position]
+
+    def __setitem__(self, key, value):
+        self.__files[key] = value
+
+    def __repr__(self):
+        return f'Files of directory {self.__root_dir_path}'
+
+    def __scan_of_dir(self, current_dir: str):
+        for filename in os.listdir(current_dir):
+            filename_full = os.path.abspath(os.path.join(current_dir, filename))
+            filename_short = filename_full.replace(self.__root_dir_path + '/', '')
+
+            if self.__is_recursion and isdir(filename_full):
+                self.__files.append(self.__scan_of_dir(filename_full))
+            if isfile(filename_full):
+                self.__files.append(
+                    (filename_short, filename_full)
+                )
+        self.__files = sorted(self.__files)
+
+    def index(self, item: tuple) -> int:
+        """
+        Возвращает индекс элемента item в списке.
+        """
+        return self.__files.index(item)
+
+    def append(self, item: tuple) -> None:
+        """
+        Добавляет новый элемент item в список.
+        """
+        self.__files.append(item)
+
+    def update(self, old_item: tuple, new_item: tuple) -> None:
+        """
+        Заменяет old_item на new_item.
+        """
+        index = self.index(old_item)
+        self.__files[index] = new_item
+
+
 class ImageRenamer:
     """
     Производит переименование всех файлов в текущем каталоге на основе информации из EXIF-данных.
@@ -18,7 +72,7 @@ class ImageRenamer:
     """
     __path: str
     __root_path: str
-    __recursion: bool = False
+    __is_recursion: bool = False
     __is_unique_name: bool = False
     __suffix_for_unique_name: str = ' (copy)'
     __template_datetime_for_new_file: str = '%Y%m%d_%H%M%S'
@@ -63,7 +117,7 @@ class ImageRenamer:
         self.__template_datetime_for_new_file = template
 
     def set_recursion(self, recursion: False) -> None:
-        self.__recursion = recursion
+        self.__is_recursion = recursion
 
     def set_make_unique_name(self, is_unique_name: bool) -> None:
         self.__is_unique_name = is_unique_name
@@ -74,88 +128,85 @@ class ImageRenamer:
         :return: None
         """
         try:
-            for old_filename in sorted(os.listdir(self.__path)):
-                abs_dirname = os.path.abspath(self.__path)  # Например, /home/user/image_folder
-                local_dirname = abs_dirname.replace(self.__root_path, '')[1:]  # Например, image_folder/dir1
-                full_old_filename = os.path.join(abs_dirname, old_filename)
-
-                if isdir(full_old_filename):
-                    # ToDo Добавить флаг
-                    if self.__recursion:
-                        self.set_path(full_old_filename)
-                        self.rename(preview)
+            # Соглашение по именованию переменных
+            # *_full - абсолютный адрес файла, например /home/user/folder/a.jpg
+            # *_local - локальный адрес файла относительно корневой директории, например folder/a.jpg
+            # *_short - имя файла, например a.jpg
+            file_objects = FileObject(self.__root_path, self.__is_recursion)
+            for old_filename_short, old_filename_full in file_objects:
+                try:
+                    new_filename_full = self.__get_new_filename(old_filename_full)
+                    new_filename_short = self.__get_short_name_from_full(new_filename_full)
+                except FileNotFoundError:
+                    self.__print_message(self.message_code['FILE_NOT_EXISTS'], old_filename_short)
                     continue
-
-                # Получаем EXIF-данные из файла и используем их для нового имени.
-                # На выходе будет одно из следующих значений:
-                #   - корректное новое имя файла
-                #   - одна из ошибок из self.message_code если подобратьь имя не удалось
-                #   - None, если у файла нет EXIF-данных.
-                new_filename = self.__check_availability_to_file(os.path.join(abs_dirname, old_filename))
-                local_old_filename = os.path.join(local_dirname, old_filename)
+                except PIL.UnidentifiedImageError:
+                    self.__print_message(self.message_code['FILE_DOESNT_HAVE_EXIF'], old_filename_short)
+                    continue
+                except KeyError:
+                    self.__print_message(self.message_code['FILE_DOESNT_HAVE_EXIF'], old_filename_short)
+                    continue
+                except PermissionError:
+                    self.__print_message(self.message_code['PERMISSION_DENIED'], old_filename_short)
+                    continue
+                except ValueError:
+                    self.__print_message(self.message_code['INCORRECT_EXIF'], old_filename_short)
+                    continue
 
                 # Если у файла нет EXIF-данных - печатаем сообщение в консоль и переходим на следующую итерацию цикла.
-                if new_filename is None:
-                    self.__print_message(self.message_code['FILE_DOESNT_HAVE_EXIF'], local_old_filename)
+                if new_filename_short is None:
+                    self.__print_message(self.message_code['FILE_DOESNT_HAVE_EXIF'], old_filename_short)
                     continue
-
-                # В случае возникновения ошибок - печатаем сообщение в консоль и переходим на следующую итерацию цикла.
-                if new_filename in self.message_code.values():
-                    self.__print_message(new_filename, old_filename)
-                    continue
-
-                local_new_filename = os.path.join(local_dirname, new_filename)
 
                 # Если файл с таким именем уже существует в директории, то в зависимости от настроек
                 # либо подбираем уникальное имя, либо пишем, что невозможно переименовать, и идём дальше.
-                if new_filename in os.listdir(abs_dirname):
+                if (new_filename_short, new_filename_full) in file_objects:
                     if self.__is_unique_name:
-                        new_filename = self.__make_unique_filename(new_filename, abs_dirname)
-                        local_new_filename = os.path.join(local_dirname, new_filename)
+                        new_filename_full = self.__make_unique_filename(new_filename_full)
                     else:
                         self.__print_message(self.message_code['FILE_EXISTS'],
-                                             local_old_filename, local_new_filename)
+                                             self.__get_local_name_from_full(old_filename_full),
+                                             self.__get_local_name_from_full(new_filename_full))
                         continue
 
                 if not preview:
                     try:
-                        os.rename(full_old_filename, os.path.join(abs_dirname, new_filename))
+                        os.rename(old_filename_full, new_filename_full)
                     except PermissionError:
-                        self.__print_message(self.message_code['PERMISSION_DENIED'], local_old_filename)
+                        self.__print_message(self.message_code['PERMISSION_DENIED'], old_filename_full)
                         continue
-                self.__print_message(self.message_code['SUCCESS'], local_old_filename, local_new_filename)
+
+                    file_objects.update(
+                        (old_filename_short, old_filename_full),
+                        (new_filename_short, new_filename_full)
+                    )
+                self.__print_message(self.message_code['SUCCESS'],
+                                     old_filename_short,
+                                     self.__get_local_name_from_full(new_filename_full))
         except FileNotFoundError:
             self.__print_message(self.__dir_not_exist, self.__path)
 
-    def __check_availability_to_file(self, filename) -> str | None:
+    def __get_new_filename(self, filename) -> str | None:
         """
-        Пытается получить EXIF-данные из файла.
+        Возвращает новое имя для файла 'filename' на основе его EXIF-данных.
         Если файл не содержит EXIF-данных, то возвращает None.
-        В случае успеха возвращает строку str, содержащую новое имя для файла.
-        Если произошло исключение, то возвращает строку str с кодом ошибки.
         """
-        try:
-            result = self.__get_datetime_from_exif(filename)
-        except FileNotFoundError:
-            result = self.message_code['FILE_NOT_EXISTS']
-        except PIL.UnidentifiedImageError:
-            result = self.message_code['FILE_DOESNT_HAVE_EXIF']
-        except KeyError:
-            result = self.message_code['FILE_DOESNT_HAVE_EXIF']
-        except PermissionError:
-            result = self.message_code['PERMISSION_DENIED']
-        except ValueError:
-            result = self.message_code['INCORRECT_EXIF']
+        abs_dirpath = os.sep.join(filename.split(os.sep)[:-1])
+        new_filename = os.path.join(abs_dirpath, self.__get_datetime_from_exif(filename))
 
-        return result
+        return new_filename
 
     def __get_datetime_from_exif(self, filename: str) -> str | None:
         """
         Пытается получить EXIF-данные из файла, указанного в 'filename'.
         В случае успеха - возвращает форматированную строку, пригодную для нового имени файла.
-        Если EXIF-информации у файла нет, возвращает False.
+        Если EXIF-информации у файла нет, возвращает None.
 
-        В случае, если формат даты и времени в EXIF не соответствует стандартному, вызывается исключение ValueError.
+        Исключения:
+         - FileNotFoundError            файл не существует
+         - PermissionError              нет прав доступа к файлу
+         - PIL.UnidentifiedImageError   'filename' не является изображением
+         - KeyError                     нет ключа 306 в EXIF-данных
         """
         image = Image.open(filename)
         extension = filename.split('.')[-1]
@@ -168,18 +219,20 @@ class ImageRenamer:
     @staticmethod
     def __try_parsing_date(datetime_string):
         """
-        Проверяет datetime_string на соответствие шиблонам.
+        Проверяет 'datetime_string' на соответствие шаблонам.
         В случае, если совпадение найдено, то возвращает объект типа Datetime.
-        Если совпадения не обнаружено возвращает ValueError.
+
+        Исключения:
+         - ValueError   не получилось распознать дату и время в EXIF
         """
         datetimes_templates = ('%Y:%m:%d %H:%M:%S', '%Y.%m.%d %H:%M:%S', '%Y/%m/%d %H:%M:%S', '%Y/%d/%m %H:%M:%S')
         for template in datetimes_templates:
-            try:
-                return datetime.strptime(datetime_string, template)
             # strptime() возвращает ValueError в случае, если не получилось преобразовать строку в Datetime.
             # Но так как нужно проверить все вариант шаблонов, но просто переходим к следующей итерции цикла.
             # И только если совпадения небыли найдены - возвращает ValueError.
             # Это будет означать, что данные в Datetime некорректные.
+            try:
+                return datetime.strptime(datetime_string, template)
             except ValueError:
                 continue
         raise ValueError()
@@ -197,11 +250,10 @@ class ImageRenamer:
         """
         click.echo(code.format(old_filename, new_filename))
 
-    def __make_unique_filename(self, filename: str, dirname: str) -> str:
+    def __make_unique_filename(self, filename: str) -> str:
         """
         Добавляет к названию файла 'filename' перед расширением ' (copy)' и возвращает полученное имя.
         :param filename: Имя файла, для которого нужно найти уникальное имя
-        :param dirname: Абсолютный путь к папке, в которой хранится файл
         :return: Новое имя файла, уникальное для папки dirname
         """
         splited = filename.split('.')
@@ -213,7 +265,14 @@ class ImageRenamer:
             else:
                 new_filename += f'.{splited[item]}'
         new_filename += f'{self.__suffix_for_unique_name}.{extention}'
-        if isfile(os.path.join(dirname, new_filename)):
-            new_filename = self.__make_unique_filename(new_filename, dirname)
+        if isfile(new_filename):
+            new_filename = self.__make_unique_filename(new_filename)
 
         return new_filename
+
+    def __get_local_name_from_full(self, filename_full: str) -> str:
+        return filename_full.replace(self.__root_path + '/', '')
+
+    @staticmethod
+    def __get_short_name_from_full(filename_full: str) -> str:
+        return filename_full.split(os.sep)[-1]
