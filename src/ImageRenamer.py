@@ -1,7 +1,6 @@
 import os
 from os.path import isfile, isdir
 from datetime import datetime
-from pprint import pprint
 
 import PIL
 from PIL import Image
@@ -70,7 +69,6 @@ class ImageRenamer:
     Производит переименование всех файлов в текущем каталоге на основе информации из EXIF-данных.
     Директории пропускаются, рекурсивное переименование директорий не поддерживается.
     """
-    __path: str
     __root_path: str
     __is_recursion: bool = False
     __is_unique_name: bool = False
@@ -106,11 +104,7 @@ class ImageRenamer:
                        click.style(' не существует.', fg='red'))
 
     def __init__(self, path: str):
-        self.__path = self.__root_path = str(path)
-
-    def set_path(self, path):
-        """ Устанавливает путь директории, в которой происходит переименование файлов. """
-        self.__path = path
+        self.__root_path = str(path)
 
     def set_template(self, template: str) -> None:
         """Устанавливает шаблон переименования файлов. """
@@ -184,7 +178,7 @@ class ImageRenamer:
                                      old_filename_short,
                                      self.__get_local_name_from_full(new_filename_full))
         except FileNotFoundError:
-            self.__print_message(self.__dir_not_exist, self.__path)
+            self.__print_message(self.__dir_not_exist, self.__root_path)
 
     def __get_new_filename(self, filename) -> str | None:
         """
