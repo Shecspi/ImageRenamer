@@ -32,16 +32,15 @@ class FileObject:
         return f'Files of directory {self.__root_dir_path}'
 
     def __scan_of_dir(self, current_dir: str):
-        for filename in os.listdir(current_dir):
-            filename_full = os.path.abspath(os.path.join(current_dir, filename))
-            filename_short = filename_full.replace(self.__root_dir_path + '/', '')
+        with os.scandir(current_dir) as files:
+            for file in files:
+                filename_full = os.path.abspath(os.path.join(current_dir, file))
+                filename_short = filename_full.replace(self.__root_dir_path + '/', '')
 
-            if self.__is_recursion and isdir(filename_full):
-                self.__files.append(self.__scan_of_dir(filename_full))
-            if isfile(filename_full):
-                self.__files.append(
-                    (filename_short, filename_full)
-                )
+                if self.__is_recursion and file.is_dir():
+                    self.__files.append(self.__scan_of_dir(filename_full))
+                if file.is_file():
+                    self.__files.append((filename_short, filename_full))
         self.__files = sorted(self.__files)
 
     def index(self, item: tuple) -> int:
