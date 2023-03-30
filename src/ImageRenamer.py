@@ -110,7 +110,7 @@ class ImageRenamer:
                        click.style(' не существует.', fg='white'))
 
     def __init__(self, path: str):
-        self.__root_path = str(path)
+        self.__root_path = os.path.abspath(str(path)) + '/'
 
     def set_template(self, template: str) -> None:
         """Устанавливает шаблон переименования файлов. """
