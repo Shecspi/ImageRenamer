@@ -54,7 +54,7 @@ def test_file_already_exists_unique_names_default__stdout(create_images: str, ca
     В таком случае переименование не должно осуществиться.
     """
     execute_renamer(create_images)
-    expected_stdout = ('- file_exists1.jpg невозможно переименовать, '
+    expected_stdout = ('[ FAIL ] file_exists1.jpg невозможно переименовать, '
                        '10010101_010101.jpg уже существует.')
     actual_stdout = capsys.readouterr()
     assert expected_stdout in actual_stdout.out
@@ -82,7 +82,7 @@ def test_file_already_exists_unique_names_false__stdout(create_images: str, caps
     В таком случае переименование не должно осуществиться.
     """
     execute_renamer(create_images, make_unique_name=False)
-    expected_stdout = ('- file_exists1.jpg невозможно переименовать, '
+    expected_stdout = ('[ FAIL ] file_exists1.jpg невозможно переименовать, '
                        '10010101_010101.jpg уже существует.')
     actual_stdout = capsys.readouterr()
     assert expected_stdout in actual_stdout.out
@@ -109,7 +109,7 @@ def test_file_already_exists_unique_names_true__stdout(create_images: str, capsy
     В таком случае файл должен быть переименован, но с добавлением суффикса ' (copy)'.
     """
     execute_renamer(create_images, make_unique_name=True)
-    expected_stdout = '+ file_exists1.jpg -> 10010101_010101 (copy).jpg'
+    expected_stdout = '[  OK  ] file_exists1.jpg -> 10010101_010101 (copy).jpg'
     actual_stdout = capsys.readouterr()
     assert expected_stdout in actual_stdout.out
 
@@ -139,8 +139,8 @@ def test_same_datetimes_unique_names_default__stdout(create_images: str, capsys)
     """
     execute_renamer(create_images)
     expected_stdout = [
-        '+ file_exists2.jpg -> 10020101_010101.jpg',
-        '- file_exists3.jpg невозможно переименовать, 10020101_010101.jpg уже существует.'
+        '[  OK  ] file_exists2.jpg -> 10020101_010101.jpg',
+        '[ FAIL ] file_exists3.jpg невозможно переименовать, 10020101_010101.jpg уже существует.'
     ]
     actual_stdout = capsys.readouterr()
     for out in expected_stdout:
@@ -172,8 +172,8 @@ def test_same_datetimes_unique_names_false__stdout(create_images: str, capsys):
     """
     execute_renamer(create_images, make_unique_name=False)
     expected_stdout = [
-        '+ file_exists2.jpg -> 10020101_010101.jpg',
-        '- file_exists3.jpg невозможно переименовать, 10020101_010101.jpg уже существует.'
+        '[  OK  ] file_exists2.jpg -> 10020101_010101.jpg',
+        '[ FAIL ] file_exists3.jpg невозможно переименовать, 10020101_010101.jpg уже существует.'
     ]
     actual_stdout = capsys.readouterr()
     for out in expected_stdout:
@@ -205,8 +205,8 @@ def test_same_datetimes_unique_names_true__stdout(create_images: str, capsys):
     """
     execute_renamer(create_images, make_unique_name=True)
     expected_stdout = [
-        '+ file_exists2.jpg -> 10020101_010101.jpg',
-        '+ file_exists3.jpg -> 10020101_010101 (copy).jpg'
+        '[  OK  ] file_exists2.jpg -> 10020101_010101.jpg',
+        '[  OK  ] file_exists3.jpg -> 10020101_010101 (copy).jpg'
     ]
     actual_stdout = capsys.readouterr()
     for out in expected_stdout:
@@ -243,10 +243,10 @@ def test_same_datetimes_unique_names_true_recursive__stdout(create_images: str, 
     """
     execute_renamer(create_images, make_unique_name=True)
     expected_stdout = [
-        '+ file_exists2.jpg -> 10020101_010101.jpg',
-        '+ file_exists3.jpg -> 10020101_010101 (copy).jpg',
-        '+ file_exists4.jpg -> 10020101_010101 (copy) (copy).jpg',
-        '+ file_exists5.jpg -> 10020101_010101 (copy) (copy) (copy).jpg'
+        '[  OK  ] file_exists2.jpg -> 10020101_010101.jpg',
+        '[  OK  ] file_exists3.jpg -> 10020101_010101 (copy).jpg',
+        '[  OK  ] file_exists4.jpg -> 10020101_010101 (copy) (copy).jpg',
+        '[  OK  ] file_exists5.jpg -> 10020101_010101 (copy) (copy) (copy).jpg'
     ]
     actual_stdout = capsys.readouterr()
     for out in expected_stdout:

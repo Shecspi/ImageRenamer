@@ -74,33 +74,35 @@ class ImageRenamer:
     __suffix_for_unique_name: str = ' (copy)'
     __template_datetime_for_new_file: str = '%Y%m%d_%H%M%S'
 
+    __style_ok = click.style('[  ') + click.style('OK', fg='green') + click.style('  ] ')
+    __style_fail = click.style('[ ') + click.style('FAIL', fg='red') + click.style(' ] ')
+
     message_code: dict = {
-        'SUCCESS': (click.style('+ ', fg='green') +
-                    click.style('{0}', bold=True, fg='green') +
-                    click.style(' -> ', fg='green') +
-                    click.style('{1}', bold=True, fg='green')),
-        'FILE_EXISTS': (click.style('- ', fg='red') +
+        'SUCCESS': (__style_ok +
+                    click.style('{0} -> ', bold=True, fg='black') +
+                    click.style('{1}', bold=True, fg='white')),
+        'FILE_EXISTS': (__style_fail +
                         click.style('{0}', bold=True, fg='red') +
                         click.style(' невозможно переименовать, ', fg='red') +
                         click.style('{1}', bold=True, fg='red') +
                         click.style(' уже существует.', fg='red')),
-        'FILE_NOT_EXISTS': (click.style('- ', fg='red') +
+        'FILE_NOT_EXISTS': (__style_fail +
                             click.style('{0}', bold=True, fg='red') +
                             click.style(' не существует.', fg='red')),
-        'PERMISSION_DENIED': (click.style('- ', fg='red') +
+        'PERMISSION_DENIED': (__style_fail +
                               click.style('{0}', bold=True, fg='red') +
                               click.style(' невозможно переименовать. Отказано в доступе.', fg='red')),
-        'FILE_DOESNT_HAVE_EXIF': (click.style('- ', fg='yellow') +
+        'FILE_DOESNT_HAVE_EXIF': (__style_fail +
                                   click.style('{0}', bold=True, fg='yellow') +
                                   click.style(' невозможно переименовать. У файла нет EXIF-данных.', fg='yellow')),
-        'INCORRECT_EXIF': (click.style('- ', fg='yellow') +
+        'INCORRECT_EXIF': (__style_fail +
                            click.style('{0}', bold=True, fg='yellow') +
                            click.style(' невозможно переименовать. Не получилось прочитать EXIF-данные.', fg='yellow')),
     }
 
-    __dir_not_exist = (click.style('Директория ', fg='red') +
-                       click.style('{0}', bold=True, fg='red') +
-                       click.style(' не существует.', fg='red'))
+    __dir_not_exist = (__style_fail + click.style('Директория ', fg='white') +
+                       click.style('{0}', bold=True, fg='black') +
+                       click.style(' не существует.', fg='white'))
 
     def __init__(self, path: str):
         self.__root_path = str(path)

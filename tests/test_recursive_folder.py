@@ -200,15 +200,15 @@ def test_recursive_true__stdout(create_images, capsys):
     """
     zero_level_dir = create_images[0]
     execute_renamer(zero_level_dir, recursion=True)
-    expected_stdout = ['+ image1.jpg -> 10010101_010101.jpg',
-                       '+ image2.jpg -> 10020101_010101.jpg',
-                       '+ image3.jpg -> 10030101_010101.jpg',
-                       '+ level1/imageR1.jpg -> level1/20010202_020202.jpg',
-                       '+ level1/imageR2.jpg -> level1/20020202_020202.jpg',
-                       '+ level1/imageR3.jpg -> level1/20030202_020202.jpg',
-                       '+ level1/level2/imageL1.jpg -> level1/level2/30010303_030303.jpg',
-                       '+ level1/level2/imageL2.jpg -> level1/level2/30020303_030303.jpg',
-                       '+ level1/level2/imageL3.jpg -> level1/level2/30030303_030303.jpg']
+    expected_stdout = ['[  OK  ] image1.jpg -> 10010101_010101.jpg',
+                       '[  OK  ] image2.jpg -> 10020101_010101.jpg',
+                       '[  OK  ] image3.jpg -> 10030101_010101.jpg',
+                       '[  OK  ] level1/imageR1.jpg -> level1/20010202_020202.jpg',
+                       '[  OK  ] level1/imageR2.jpg -> level1/20020202_020202.jpg',
+                       '[  OK  ] level1/imageR3.jpg -> level1/20030202_020202.jpg',
+                       '[  OK  ] level1/level2/imageL1.jpg -> level1/level2/30010303_030303.jpg',
+                       '[  OK  ] level1/level2/imageL2.jpg -> level1/level2/30020303_030303.jpg',
+                       '[  OK  ] level1/level2/imageL3.jpg -> level1/level2/30030303_030303.jpg']
     actual_stdout = capsys.readouterr()
     for out in expected_stdout:
         assert out in actual_stdout.out

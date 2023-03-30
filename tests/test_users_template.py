@@ -45,9 +45,9 @@ def test_users_template_1__stdout(create_images: str, capsys):
     Тестирует вывод в консоль, в случае изменения шаблона для имён файлов.
     """
     execute_renamer(create_images, '%Y%m%d-%H%M%S')
-    expected_stdout = ['+ users_template1.jpg -> 10010101-010101.jpg',
-                       '+ users_template2.jpg -> 10020101-010101.jpg',
-                       '+ users_template3.jpg -> 10030101-010101.jpg']
+    expected_stdout = ['[  OK  ] users_template1.jpg -> 10010101-010101.jpg',
+                       '[  OK  ] users_template2.jpg -> 10020101-010101.jpg',
+                       '[  OK  ] users_template3.jpg -> 10030101-010101.jpg']
     actual_stdout = capsys.readouterr()
     for out in expected_stdout:
         assert out in actual_stdout.out
@@ -70,9 +70,9 @@ def test_users_template_2__stdout(create_images: str, capsys):
     Тестирует вывод в консоль, в случае изменения шаблона для имён файлов.
     """
     execute_renamer(create_images, '%Y-%m-%d_%H-%M-%S')
-    expected_stdout = ['+ users_template1.jpg -> 1001-01-01_01-01-01.jpg',
-                       '+ users_template2.jpg -> 1002-01-01_01-01-01.jpg',
-                       '+ users_template3.jpg -> 1003-01-01_01-01-01.jpg']
+    expected_stdout = ['[  OK  ] users_template1.jpg -> 1001-01-01_01-01-01.jpg',
+                       '[  OK  ] users_template2.jpg -> 1002-01-01_01-01-01.jpg',
+                       '[  OK  ] users_template3.jpg -> 1003-01-01_01-01-01.jpg']
     actual_stdout = capsys.readouterr()
     for out in expected_stdout:
         assert out in actual_stdout.out
@@ -96,9 +96,9 @@ def test_users_template_3__stdout(create_images: str, capsys):
     Тестирует вывод в консоль, в случае изменения шаблона для имён файлов.
     """
     execute_renamer(create_images, 'Год %Y Месяц %m День %d_%H-%M-%S')
-    expected_stdout = ['+ users_template1.jpg -> Год 1001 Месяц 01 День 01_01-01-01.jpg',
-                       '+ users_template2.jpg -> Год 1002 Месяц 01 День 01_01-01-01.jpg',
-                       '+ users_template3.jpg -> Год 1003 Месяц 01 День 01_01-01-01.jpg']
+    expected_stdout = ['[  OK  ] users_template1.jpg -> Год 1001 Месяц 01 День 01_01-01-01.jpg',
+                       '[  OK  ] users_template2.jpg -> Год 1002 Месяц 01 День 01_01-01-01.jpg',
+                       '[  OK  ] users_template3.jpg -> Год 1003 Месяц 01 День 01_01-01-01.jpg']
     actual_stdout = capsys.readouterr()
     for out in expected_stdout:
         assert out in actual_stdout.out

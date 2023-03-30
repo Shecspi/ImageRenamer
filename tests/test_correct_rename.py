@@ -48,10 +48,10 @@ def test_correct_rename__stdout(create_images: str, capsys):
     Тестирует вывод в консоль при корректном переименовании файлов.
     """
     execute_renamer(create_images)
-    expected_stdout = ['+ file_exists1.jpg -> 10010101_010101.jpg',
-                       '+ file_exists2.jpg -> 10020101_010101.jpg',
-                       '+ file_exists3.jpg -> 10030101_010101.jpg',
-                       '+ file_exists4.jpg -> 10040101_010101.jpg']
+    expected_stdout = ['[  OK  ] file_exists1.jpg -> 10010101_010101.jpg',
+                       '[  OK  ] file_exists2.jpg -> 10020101_010101.jpg',
+                       '[  OK  ] file_exists3.jpg -> 10030101_010101.jpg',
+                       '[  OK  ] file_exists4.jpg -> 10040101_010101.jpg']
     actual_stdout = capsys.readouterr()
     for out in expected_stdout:
         assert out in actual_stdout.out
