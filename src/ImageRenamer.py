@@ -74,30 +74,30 @@ class ImageRenamer:
     __suffix_for_unique_name: str = ' (copy)'
     __template_datetime_for_new_file: str = '%Y%m%d_%H%M%S'
 
-    __style_ok = click.style('[  ') + click.style('OK', fg='green') + click.style('  ] ')
-    __style_fail = click.style('[ ') + click.style('FAIL', fg='red') + click.style(' ] ')
+    __style_ok = click.style('[  OK  ]  ', fg='green')
+    __style_fail = click.style('[ FAIL ]  ', fg='red')
 
     message_code: dict = {
         'SUCCESS': (__style_ok +
                     click.style('{0} -> ', bold=True, fg='black') +
-                    click.style('{1}', bold=True, fg='white')),
+                    click.style('{1}', bold=True, fg='green')),
         'FILE_EXISTS': (__style_fail +
-                        click.style('{0}', bold=True, fg='red') +
-                        click.style(' невозможно переименовать, ', fg='red') +
-                        click.style('{1}', bold=True, fg='red') +
-                        click.style(' уже существует.', fg='red')),
+                        click.style('{0}', bold=True, fg='black') +
+                        click.style(' невозможно переименовать, ') +
+                        click.style('{1}', bold=True, fg='black') +
+                        click.style(' уже существует.')),
         'FILE_NOT_EXISTS': (__style_fail +
-                            click.style('{0}', bold=True, fg='red') +
-                            click.style(' не существует.', fg='red')),
+                            click.style('{0}', bold=True, fg='black') +
+                            click.style(' не существует.')),
         'PERMISSION_DENIED': (__style_fail +
-                              click.style('{0}', bold=True, fg='red') +
-                              click.style(' невозможно переименовать. Отказано в доступе.', fg='red')),
+                              click.style('{0}', bold=True, fg='black') +
+                              click.style(' невозможно переименовать. Отказано в доступе.')),
         'FILE_DOESNT_HAVE_EXIF': (__style_fail +
-                                  click.style('{0}', bold=True, fg='yellow') +
-                                  click.style(' невозможно переименовать. У файла нет EXIF-данных.', fg='yellow')),
+                                  click.style('{0}', bold=True, fg='black') +
+                                  click.style(' невозможно переименовать. У файла нет EXIF-данных.')),
         'INCORRECT_EXIF': (__style_fail +
-                           click.style('{0}', bold=True, fg='yellow') +
-                           click.style(' невозможно переименовать. Не получилось прочитать EXIF-данные.', fg='yellow')),
+                           click.style('{0}', bold=True, fg='black') +
+                           click.style(' невозможно переименовать. Не получилось прочитать EXIF-данные.')),
     }
 
     __dir_not_exist = (__style_fail + click.style('Директория ', fg='white') +
@@ -129,28 +129,29 @@ class ImageRenamer:
             # *_short - имя файла, например a.jpg
             file_objects = FileObject(self.__root_path, self.__is_recursion)
             for old_filename_short, old_filename_full in file_objects:
+                old_filename_local = self.__get_local_name_from_full(old_filename_full)
                 try:
                     new_filename_full = self.__get_new_filename(old_filename_full)
                     new_filename_short = self.__get_short_name_from_full(new_filename_full)
                 except FileNotFoundError:
-                    self.__print_message(self.message_code['FILE_NOT_EXISTS'], old_filename_short)
+                    self.__print_message(self.message_code['FILE_NOT_EXISTS'], old_filename_local)
                     continue
                 except PIL.UnidentifiedImageError:
-                    self.__print_message(self.message_code['FILE_DOESNT_HAVE_EXIF'], old_filename_short)
+                    self.__print_message(self.message_code['FILE_DOESNT_HAVE_EXIF'], old_filename_local)
                     continue
                 except KeyError:
-                    self.__print_message(self.message_code['FILE_DOESNT_HAVE_EXIF'], old_filename_short)
+                    self.__print_message(self.message_code['FILE_DOESNT_HAVE_EXIF'], old_filename_local)
                     continue
                 except PermissionError:
-                    self.__print_message(self.message_code['PERMISSION_DENIED'], old_filename_short)
+                    self.__print_message(self.message_code['PERMISSION_DENIED'], old_filename_local)
                     continue
                 except ValueError:
-                    self.__print_message(self.message_code['INCORRECT_EXIF'], old_filename_short)
+                    self.__print_message(self.message_code['INCORRECT_EXIF'], old_filename_local)
                     continue
 
                 # Если у файла нет EXIF-данных - печатаем сообщение в консоль и переходим на следующую итерацию цикла.
                 if new_filename_short is None:
-                    self.__print_message(self.message_code['FILE_DOESNT_HAVE_EXIF'], old_filename_short)
+                    self.__print_message(self.message_code['FILE_DOESNT_HAVE_EXIF'], old_filename_local)
                     continue
 
                 # Если файл с таким именем уже существует в директории, то в зависимости от настроек
@@ -171,12 +172,12 @@ class ImageRenamer:
                         self.__print_message(self.message_code['PERMISSION_DENIED'], old_filename_full)
                         continue
 
-                    file_objects.update(
-                        (old_filename_short, old_filename_full),
-                        (new_filename_short, new_filename_full)
-                    )
+                file_objects.update(
+                    (old_filename_short, old_filename_full),
+                    (new_filename_short, new_filename_full)
+                )
                 self.__print_message(self.message_code['SUCCESS'],
-                                     old_filename_short,
+                                     self.__get_local_name_from_full(old_filename_short),
                                      self.__get_local_name_from_full(new_filename_full))
         except FileNotFoundError:
             self.__print_message(self.__dir_not_exist, self.__root_path)
@@ -266,8 +267,18 @@ class ImageRenamer:
         return new_filename
 
     def __get_local_name_from_full(self, filename_full: str) -> str:
-        return filename_full.replace(self.__root_path + '/', '')
+        """
+        Возвращает локальное имя файла из полного.
+        Например, если __root_path = '/home/user/images', то метод вернёт:
+        * filename.jpg
+        * folder/filename.jpg
+        * folder/folder/filename.jpg
+        """
+        return filename_full.replace(self.__root_path, '', 1)
 
     @staticmethod
     def __get_short_name_from_full(filename_full: str) -> str:
+        """
+        Возвращает имя файла на основе его абсолютного адреса.
+        """
         return filename_full.split(os.sep)[-1]
