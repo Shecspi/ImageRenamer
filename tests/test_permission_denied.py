@@ -47,10 +47,10 @@ def test_permission_denied__stdout(create_images: str, capsys):
     Тестирует вывод в консоль, в случае остутствия прав доступа к файлу.
     """
     execute_renamer(create_images)
-    expected_stdout = ['[  OK  ] permissions1.jpg -> 10010101_010101.jpg',
-                       '[  OK  ] permissions2.jpg -> 10020101_010101.jpg',
-                       '[  OK  ] permissions3.jpg -> 10030101_010101.jpg',
-                       '[ FAIL ] permission_denied.jpg невозможно переименовать. Отказано в доступе.']
+    expected_stdout = ['[  OK  ]  permissions1.jpg -> 10010101_010101.jpg',
+                       '[  OK  ]  permissions2.jpg -> 10020101_010101.jpg',
+                       '[  OK  ]  permissions3.jpg -> 10030101_010101.jpg',
+                       '[ FAIL ]  permission_denied.jpg невозможно переименовать. Отказано в доступе.']
     actual_stdout = capsys.readouterr()
     for out in expected_stdout:
         assert out in actual_stdout.out

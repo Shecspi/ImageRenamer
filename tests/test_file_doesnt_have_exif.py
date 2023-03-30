@@ -50,10 +50,10 @@ def test_file_doesnt_have_exif__stdout(create_images: str, capsys):
     """
     execute_renamer(create_images)
     expected_stdout = [
-        '[ FAIL ] without_exif1.jpg невозможно переименовать. У файла нет EXIF-данных.',
-        '[ FAIL ] without_exif2.jpg невозможно переименовать. Не получилось прочитать EXIF-данные.',
-        '[ FAIL ] without_exif3.jpg невозможно переименовать. Не получилось прочитать EXIF-данные.',
-        '[ FAIL ] without_exif4.jpg невозможно переименовать. Не получилось прочитать EXIF-данные.'
+        '[ FAIL ]  without_exif1.jpg невозможно переименовать. У файла нет EXIF-данных.',
+        '[ FAIL ]  without_exif2.jpg невозможно переименовать. Не получилось прочитать EXIF-данные.',
+        '[ FAIL ]  without_exif3.jpg невозможно переименовать. Не получилось прочитать EXIF-данные.',
+        '[ FAIL ]  without_exif4.jpg невозможно переименовать. Не получилось прочитать EXIF-данные.'
     ]
     actual_stdout = capsys.readouterr()
     for out in expected_stdout:

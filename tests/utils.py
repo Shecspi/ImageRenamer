@@ -16,7 +16,6 @@ def execute_renamer(temp_dir: str,
     """
     Запускает ImageRenamer.
     """
-    print(os.listdir(temp_dir))
     renamer = ImageRenamer.ImageRenamer(temp_dir)
     renamer.set_template(template)
     renamer.set_make_unique_name(make_unique_name)

@@ -40,27 +40,26 @@ class FileObject:
         with os.scandir(current_dir) as files:
             for file in files:
                 filename_full = os.path.abspath(os.path.join(current_dir, file))
-                filename_short = filename_full.replace(self.__root_dir_path + '/', '')
 
                 if self.__is_recursion and file.is_dir():
                     self.__files.append(self.__scan_of_dir(filename_full))
                 if file.is_file():
-                    self.__files.append((filename_short, filename_full))
+                    self.__files.append(filename_full)
         self.__files = sorted(self.__files)
 
-    def index(self, item: tuple) -> int:
+    def index(self, item: str) -> int:
         """
         Возвращает индекс элемента item в списке.
         """
         return self.__files.index(item)
 
-    def append(self, item: tuple) -> None:
+    def append(self, item: str) -> None:
         """
         Добавляет новый элемент item в список.
         """
         self.__files.append(item)
 
-    def update(self, old_item: tuple, new_item: tuple) -> None:
+    def update(self, old_item: str, new_item: str) -> None:
         """
         Заменяет old_item на new_item.
         """
@@ -133,7 +132,7 @@ class ImageRenamer:
             # *_local - локальный адрес файла относительно корневой директории, например folder/a.jpg
             # *_short - имя файла, например a.jpg
             file_objects = FileObject(self.__root_path, self.__is_recursion)
-            for old_filename_short, old_filename_full in file_objects:
+            for old_filename_full in file_objects:
                 old_filename_local = self.__get_local_name_from_full(old_filename_full)
                 try:
                     new_filename_full = self.__get_new_filename(old_filename_full)
@@ -154,14 +153,9 @@ class ImageRenamer:
                     self.__print_message(self.message_code['INCORRECT_EXIF'], old_filename_local)
                     continue
 
-                # Если у файла нет EXIF-данных - печатаем сообщение в консоль и переходим на следующую итерацию цикла.
-                if new_filename_short is None:
-                    self.__print_message(self.message_code['FILE_DOESNT_HAVE_EXIF'], old_filename_local)
-                    continue
-
                 # Если файл с таким именем уже существует в директории, то в зависимости от настроек
                 # либо подбираем уникальное имя, либо пишем, что невозможно переименовать, и идём дальше.
-                if (new_filename_short, new_filename_full) in file_objects:
+                if new_filename_full in file_objects:
                     if self.__is_unique_name:
                         new_filename_full = self.__make_unique_filename(new_filename_full)
                     else:
@@ -177,12 +171,9 @@ class ImageRenamer:
                         self.__print_message(self.message_code['PERMISSION_DENIED'], old_filename_full)
                         continue
 
-                file_objects.update(
-                    (old_filename_short, old_filename_full),
-                    (new_filename_short, new_filename_full)
-                )
+                file_objects.update(old_filename_full, new_filename_full)
                 self.__print_message(self.message_code['SUCCESS'],
-                                     self.__get_local_name_from_full(old_filename_short),
+                                     self.__get_local_name_from_full(old_filename_full),
                                      self.__get_local_name_from_full(new_filename_full))
         except FileNotFoundError:
             self.__print_message(self.__dir_not_exist, self.__root_path)
