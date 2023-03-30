@@ -1,5 +1,5 @@
 import os
-from os.path import isfile, isdir
+from os.path import isfile
 from datetime import datetime
 
 import PIL
@@ -7,8 +7,13 @@ from PIL import Image
 from pillow_heif import register_heif_opener
 
 import click
+import ffmpeg
 
 register_heif_opener()
+
+
+class FileDoesntHaveExif(Exception):
+    ...
 
 
 class FileObject:
@@ -136,7 +141,7 @@ class ImageRenamer:
                 except FileNotFoundError:
                     self.__print_message(self.message_code['FILE_NOT_EXISTS'], old_filename_local)
                     continue
-                except PIL.UnidentifiedImageError:
+                except FileDoesntHaveExif:
                     self.__print_message(self.message_code['FILE_DOESNT_HAVE_EXIF'], old_filename_local)
                     continue
                 except KeyError:
@@ -195,22 +200,31 @@ class ImageRenamer:
     def __get_datetime_from_exif(self, filename: str) -> str | None:
         """
         Пытается получить EXIF-данные из файла, указанного в 'filename'.
+        Это может быть изображение, тогда используется модуль PIL,
+        или видео, тогда используется модуль ffmpeg.
+
         В случае успеха - возвращает форматированную строку, пригодную для нового имени файла.
         Если EXIF-информации у файла нет, возвращает None.
 
         Исключения:
-         - FileNotFoundError            файл не существует
-         - PermissionError              нет прав доступа к файлу
-         - PIL.UnidentifiedImageError   'filename' не является изображением
-         - KeyError                     нет ключа 306 в EXIF-данных
+         - FileNotFoundError     файл не существует
+         - PermissionError       нет прав доступа к файлу
+         - FileDoesntHaveExif   'filename' не является изображением
+         - KeyError              нет ключа 306 в EXIF-данных
         """
-        image = Image.open(filename)
-        extension = filename.split('.')[-1]
+        try:
+            image = Image.open(filename)
 
-        exifdata = image.getexif()[306]
+            exifdata = image.getexif()[306]
+        except PIL.UnidentifiedImageError:
+            try:
+                exifdata = ffmpeg.probe(filename)['streams'][0]['tags']['creation_time']
+            except (KeyError, ffmpeg._run.Error):
+                raise FileDoesntHaveExif
+
         old_format = self.__try_parsing_date(exifdata)
-
-        return self.__reformat_datetime(old_format) + f'.{extension}'
+        extension = os.path.splitext(filename)[1]
+        return self.__reformat_datetime(old_format) + f'{extension}'
 
     @staticmethod
     def __try_parsing_date(datetime_string):
@@ -221,7 +235,8 @@ class ImageRenamer:
         Исключения:
          - ValueError   не получилось распознать дату и время в EXIF
         """
-        datetimes_templates = ('%Y:%m:%d %H:%M:%S', '%Y.%m.%d %H:%M:%S', '%Y/%m/%d %H:%M:%S', '%Y/%d/%m %H:%M:%S')
+        datetimes_templates = ('%Y:%m:%d %H:%M:%S', '%Y.%m.%d %H:%M:%S', '%Y/%m/%d %H:%M:%S',
+                               '%Y/%d/%m %H:%M:%S', '%Y-%m-%dT%H:%M:%S.000000Z')
         for template in datetimes_templates:
             # strptime() возвращает ValueError в случае, если не получилось преобразовать строку в Datetime.
             # Но так как нужно проверить все вариант шаблонов, но просто переходим к следующей итерции цикла.
