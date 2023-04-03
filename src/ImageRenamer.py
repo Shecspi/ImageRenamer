@@ -9,119 +9,20 @@ from pillow_heif import register_heif_opener
 import click
 import ffmpeg
 
+from src.FieldBasic import FieldBasic
+from src.FieldCounter import FieldCounter
+from src.FileObject import FileObject
+from src.ProjectException import FileDoesntHaveExif
+from src.FieldTextString import FieldTextString
+
 register_heif_opener()
 
 
-class FileDoesntHaveExif(Exception):
-    ...
-
-
-class FileObject:
-    def __init__(self, root_dir_path: str = '.', is_recursion: bool = False):
-        self.__files = list()
-        self.__is_recursion = is_recursion
-        self.__root_dir_path = root_dir_path
-
-        self.__scan_of_dir(root_dir_path)
-
-    def __len__(self):
-        return len(self.__files)
-
-    def __getitem__(self, position):
-        return self.__files[position]
-
-    def __setitem__(self, key, value):
-        self.__files[key] = value
-
-    def __repr__(self):
-        return f'Files of directory {self.__root_dir_path}'
-
-    def __scan_of_dir(self, current_dir: str):
-        with os.scandir(current_dir) as files:
-            for file in files:
-                filename_full = os.path.abspath(os.path.join(current_dir, file))
-
-                if self.__is_recursion and file.is_dir():
-                    self.__files.append(self.__scan_of_dir(filename_full))
-                if file.is_file():
-                    self.__files.append(filename_full)
-        self.__files = sorted(self.__files)
-
-    def index(self, item: str) -> int:
-        """
-        Возвращает индекс элемента item в списке.
-        """
-        return self.__files.index(item)
-
-    def append(self, item: str) -> None:
-        """
-        Добавляет новый элемент item в список.
-        """
-        self.__files.append(item)
-
-    def update(self, old_item: str, new_item: str) -> None:
-        """
-        Заменяет old_item на new_item.
-        """
-        index = self.index(old_item)
-        self.__files[index] = new_item
-
-
-class ImageRenamer:
+class ImageRenamer(FieldBasic, FieldCounter, FieldTextString):
     """
     Производит переименование всех файлов в текущем каталоге на основе информации из EXIF-данных.
     Директории пропускаются, рекурсивное переименование директорий не поддерживается.
     """
-    __style_ok = click.style('[  OK  ]  ', fg='green')
-    __style_fail = click.style('[ FAIL ]  ', fg='red')
-
-    message_code: dict = {
-        'SUCCESS': (__style_ok +
-                    click.style('{0} -> ', bold=True, fg='black') +
-                    click.style('{1}', bold=True, fg='green')),
-        'FILE_EXISTS': (__style_fail +
-                        click.style('{0}', bold=True, fg='black') +
-                        click.style(' невозможно переименовать, ') +
-                        click.style('{1}', bold=True, fg='black') +
-                        click.style(' уже существует.')),
-        'FILE_NOT_EXISTS': (__style_fail +
-                            click.style('{0}', bold=True, fg='black') +
-                            click.style(' не существует.')),
-        'PERMISSION_DENIED': (__style_fail +
-                              click.style('{0}', bold=True, fg='black') +
-                              click.style(' невозможно переименовать. Отказано в доступе.')),
-        'FILE_DOESNT_HAVE_EXIF': (__style_fail +
-                                  click.style('{0}', bold=True, fg='black') +
-                                  click.style(' невозможно переименовать. У файла нет EXIF-данных.')),
-        'INCORRECT_EXIF': (__style_fail +
-                           click.style('{0}', bold=True, fg='black') +
-                           click.style(' невозможно переименовать. Не получилось прочитать EXIF-данные.')),
-    }
-
-    __dir_not_exist = (__style_fail + click.style('Директория ', fg='white') +
-                       click.style('{0}', bold=True, fg='black') +
-                       click.style(' не существует.', fg='white'))
-
-    def __init__(self, path: str):
-        self.__root_path = os.path.abspath(str(path)) + '/'
-        self.__is_recursion: bool = False
-        self.__is_unique_name: bool = False
-        self.__suffix_for_unique_name: str = ' (copy)'
-        self.__template_datetime_for_new_file: str = '%Y%m%d_%H%M%S'
-
-        self.__renamed_qty = 0
-        self.__failed_qty = 0
-
-    def set_template(self, template: str) -> None:
-        """Устанавливает шаблон переименования файлов. """
-        self.__template_datetime_for_new_file = template
-
-    def set_recursion(self, recursion: False) -> None:
-        self.__is_recursion = recursion
-
-    def set_make_unique_name(self, is_unique_name: bool) -> None:
-        self.__is_unique_name = is_unique_name
-
     def rename(self, preview: bool = False) -> None:
         """
         :param preview: Если True, то будет выведен виртуальный результат переименования, но без переименования.
@@ -132,35 +33,35 @@ class ImageRenamer:
             # *_full - абсолютный адрес файла, например /home/user/folder/a.jpg
             # *_local - локальный адрес файла относительно корневой директории, например folder/a.jpg
             # *_short - имя файла, например a.jpg
-            file_objects = FileObject(self.__root_path, self.__is_recursion)
+            file_objects = FileObject(self.root_path, self.is_recursion)
             for old_filename_full in file_objects:
                 old_filename_local = self.__get_local_name_from_full(old_filename_full)
                 try:
                     new_filename_full = self.__get_new_filename(old_filename_full)
                 except FileNotFoundError:
                     self.__print_message(self.message_code['FILE_NOT_EXISTS'], old_filename_local)
-                    self.__failed_qty += 1
+                    self._failed_qty += 1
                     continue
                 except (FileDoesntHaveExif, KeyError):
                     self.__print_message(self.message_code['FILE_DOESNT_HAVE_EXIF'], old_filename_local)
-                    self.__failed_qty += 1
+                    self._failed_qty += 1
                     continue
                 except PermissionError:
                     self.__print_message(self.message_code['PERMISSION_DENIED'], old_filename_local)
-                    self.__failed_qty += 1
+                    self._failed_qty += 1
                     continue
                 except ValueError:
                     self.__print_message(self.message_code['INCORRECT_EXIF'], old_filename_local)
-                    self.__failed_qty += 1
+                    self._failed_qty += 1
                     continue
 
                 # Если файл с таким именем уже существует в директории, то в зависимости от настроек
                 # либо подбираем уникальное имя, либо пишем, что невозможно переименовать, и идём дальше.
                 if new_filename_full in file_objects:
-                    if self.__is_unique_name:
+                    if self.is_unique_name:
                         new_filename_full = self.__make_unique_filename(new_filename_full)
                     else:
-                        self.__failed_qty += 1
+                        self._failed_qty += 1
                         self.__print_message(self.message_code['FILE_EXISTS'],
                                              self.__get_local_name_from_full(old_filename_full),
                                              self.__get_local_name_from_full(new_filename_full))
@@ -174,19 +75,19 @@ class ImageRenamer:
                         continue
 
                 file_objects.update(old_filename_full, new_filename_full)
-                self.__renamed_qty += 1
+                self._renamed_qty += 1
                 self.__print_message(self.message_code['SUCCESS'],
                                      self.__get_local_name_from_full(old_filename_full),
                                      self.__get_local_name_from_full(new_filename_full))
 
             words = ['файлов', 'файл', 'файла', 'файла', 'файла', 'файлов', 'файлов', 'файлов', 'файлов', 'файлов']
-            self.__print_message(f'\nУспешно переименовано: {self.__renamed_qty} '
-                                 f'{words[int(str(self.__renamed_qty)[-1])]}', 'hi')
-            if self.__failed_qty:
-                self.__print_message(f'Не удалось переименовать: {self.__failed_qty} '
-                                     f'{words[int(str(self.__failed_qty)[-1])]}', 'hi')
+            self.__print_message(f'\nУспешно переименовано: {self._renamed_qty} '
+                                 f'{words[int(str(self._renamed_qty)[-1])]}', 'hi')
+            if self._failed_qty:
+                self.__print_message(f'Не удалось переименовать: {self._failed_qty} '
+                                     f'{words[int(str(self._failed_qty)[-1])]}', 'hi')
         except FileNotFoundError:
-            self.__print_message(self.__dir_not_exist, self.__root_path)
+            self.__print_message(self.__dir_not_exist, self.root_path)
 
     def __get_new_filename(self, filename) -> str | None:
         """
@@ -253,7 +154,7 @@ class ImageRenamer:
         """
         Возвращает строку с изменённым на основе шаблона форматом даты и времени.
         """
-        return datetime.strftime(old_format, self.__template_datetime_for_new_file)
+        return datetime.strftime(old_format, self.template_datetime_for_new_file)
 
     @staticmethod
     def __print_message(code: str, old_filename: str, new_filename: str = ''):
@@ -276,7 +177,7 @@ class ImageRenamer:
                 new_filename += f'{splited[item]}'
             else:
                 new_filename += f'.{splited[item]}'
-        new_filename += f'{self.__suffix_for_unique_name}.{extention}'
+        new_filename += f'{self.suffix_for_unique_name}.{extention}'
         if isfile(new_filename):
             new_filename = self.__make_unique_filename(new_filename)
 
@@ -290,7 +191,7 @@ class ImageRenamer:
         * folder/filename.jpg
         * folder/folder/filename.jpg
         """
-        return filename_full.replace(self.__root_path, '', 1)
+        return filename_full.replace(self.root_path + os.sep, '', 1)
 
     @staticmethod
     def __get_short_name_from_full(filename_full: str) -> str:

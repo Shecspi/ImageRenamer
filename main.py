@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import os.path
+
 import click
 import settings
 from src import ImageRenamer
@@ -29,10 +31,12 @@ from src import ImageRenamer
                    'проходить каталоги и переименовывать в них файлы.')
 def main(path: str, preview: bool, recursion: bool,
          template: str, unique_name: bool) -> None:
-    renamer = ImageRenamer.ImageRenamer(path)
-    renamer.set_recursion(recursion)
-    renamer.set_template(template)
-    renamer.set_make_unique_name(unique_name)
+    renamer = ImageRenamer.ImageRenamer(
+        root_path=os.path.abspath(path),
+        is_recursion=recursion,
+        template_datetime_for_new_file=template,
+        is_unique_name=unique_name
+    )
     renamer.rename(preview)
 
 

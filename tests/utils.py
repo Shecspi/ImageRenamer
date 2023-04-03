@@ -16,10 +16,12 @@ def execute_renamer(temp_dir: str,
     """
     Запускает ImageRenamer.
     """
-    renamer = ImageRenamer.ImageRenamer(temp_dir)
-    renamer.set_template(template)
-    renamer.set_make_unique_name(make_unique_name)
-    renamer.set_recursion(recursion)
+    renamer = ImageRenamer.ImageRenamer(
+        root_path=temp_dir,
+        template_datetime_for_new_file=template,
+        is_unique_name=make_unique_name,
+        is_recursion=recursion
+    )
     renamer.rename()
 
 
