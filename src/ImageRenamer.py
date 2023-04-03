@@ -72,12 +72,6 @@ class ImageRenamer:
     Производит переименование всех файлов в текущем каталоге на основе информации из EXIF-данных.
     Директории пропускаются, рекурсивное переименование директорий не поддерживается.
     """
-    __root_path: str
-    __is_recursion: bool = False
-    __is_unique_name: bool = False
-    __suffix_for_unique_name: str = ' (copy)'
-    __template_datetime_for_new_file: str = '%Y%m%d_%H%M%S'
-
     __style_ok = click.style('[  OK  ]  ', fg='green')
     __style_fail = click.style('[ FAIL ]  ', fg='red')
 
@@ -110,6 +104,13 @@ class ImageRenamer:
 
     def __init__(self, path: str):
         self.__root_path = os.path.abspath(str(path)) + '/'
+        self.__is_recursion: bool = False
+        self.__is_unique_name: bool = False
+        self.__suffix_for_unique_name: str = ' (copy)'
+        self.__template_datetime_for_new_file: str = '%Y%m%d_%H%M%S'
+
+        self.__renamed_qty = 0
+        self.__failed_qty = 0
 
     def set_template(self, template: str) -> None:
         """Устанавливает шаблон переименования файлов. """
@@ -136,21 +137,21 @@ class ImageRenamer:
                 old_filename_local = self.__get_local_name_from_full(old_filename_full)
                 try:
                     new_filename_full = self.__get_new_filename(old_filename_full)
-                    new_filename_short = self.__get_short_name_from_full(new_filename_full)
                 except FileNotFoundError:
                     self.__print_message(self.message_code['FILE_NOT_EXISTS'], old_filename_local)
+                    self.__failed_qty += 1
                     continue
-                except FileDoesntHaveExif:
+                except (FileDoesntHaveExif, KeyError):
                     self.__print_message(self.message_code['FILE_DOESNT_HAVE_EXIF'], old_filename_local)
-                    continue
-                except KeyError:
-                    self.__print_message(self.message_code['FILE_DOESNT_HAVE_EXIF'], old_filename_local)
+                    self.__failed_qty += 1
                     continue
                 except PermissionError:
                     self.__print_message(self.message_code['PERMISSION_DENIED'], old_filename_local)
+                    self.__failed_qty += 1
                     continue
                 except ValueError:
                     self.__print_message(self.message_code['INCORRECT_EXIF'], old_filename_local)
+                    self.__failed_qty += 1
                     continue
 
                 # Если файл с таким именем уже существует в директории, то в зависимости от настроек
@@ -159,6 +160,7 @@ class ImageRenamer:
                     if self.__is_unique_name:
                         new_filename_full = self.__make_unique_filename(new_filename_full)
                     else:
+                        self.__failed_qty += 1
                         self.__print_message(self.message_code['FILE_EXISTS'],
                                              self.__get_local_name_from_full(old_filename_full),
                                              self.__get_local_name_from_full(new_filename_full))
@@ -172,9 +174,17 @@ class ImageRenamer:
                         continue
 
                 file_objects.update(old_filename_full, new_filename_full)
+                self.__renamed_qty += 1
                 self.__print_message(self.message_code['SUCCESS'],
                                      self.__get_local_name_from_full(old_filename_full),
                                      self.__get_local_name_from_full(new_filename_full))
+
+            words = ['файлов', 'файл', 'файла', 'файла', 'файла', 'файлов', 'файлов', 'файлов', 'файлов', 'файлов']
+            self.__print_message(f'\nУспешно переименовано: {self.__renamed_qty} '
+                                 f'{words[int(str(self.__renamed_qty)[-1])]}', 'hi')
+            if self.__failed_qty:
+                self.__print_message(f'Не удалось переименовать: {self.__failed_qty} '
+                                     f'{words[int(str(self.__failed_qty)[-1])]}', 'hi')
         except FileNotFoundError:
             self.__print_message(self.__dir_not_exist, self.__root_path)
 
